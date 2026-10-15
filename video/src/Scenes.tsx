@@ -3,6 +3,7 @@ import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentF
 import { APP_H, APP_W, BEST, FakeApp, barRect } from './FakeApp';
 import { FinalShot } from './Product';
 import { Icon } from './Icons';
+import { EYE, FISH_H, FISH_W, Fish } from './Fish';
 import { C, SERIF } from './palette';
 import TL from './timeline.json';
 
@@ -186,20 +187,75 @@ export const Intro: React.FC = () => {
   const { fps } = useVideoConfig();
   const I = TL.intro;
   const exit = ramp(f, I.exit[0], I.exit[1]);
-  const icon = pop(f, I.icon, fps, 130, 14);
+
+  // 1. The snapper swims in.
+  const FS = 0.95;
+  const swim = interpolate(f, [I.swim[0], I.swim[1]], [0, 1], { ...clamp, easing: Easing.bezier(0.2, 0.7, 0.3, 1) });
+  const dive = interpolate(f, [I.dive[0], I.dive[1]], [0, 1], { ...clamp, easing: Easing.bezier(0.5, 0, 0.75, 0.5) });
+  const bob = Math.sin(f / 9) * 10 * (1 - dive);
+  const fishLeft = lerp(-1300, 800 - (FISH_W * FS) / 2 - 40, swim);
+  const fishTop = 500 - (FISH_H * FS) / 2 + bob;
+  const eyeX = fishLeft + EYE.x * FS;
+  const eyeY = fishTop + EYE.y * FS;
+
+  // 2. The camera dives into its eye.
+  const ZMAX = 30;
+  const z = Math.exp(Math.log(ZMAX) * dive);
+  const focusX = lerp(800, eyeX, Math.min(1, dive * 1.6));
+  const focusY = lerp(500, eyeY, Math.min(1, dive * 1.6));
+
+  // 3. The eye becomes the icon: the icon's ring starts exactly where the eye's ring is, then settles.
+  // Measured from icon-4k.png (rendered by design/make_icons.py): ring outer radius and centre offset.
+  const ICON_RING = 264 / 1024;
+  const RING_OFF = { x: (572.5 - 512) / 1024, y: (519.5 - 512) / 1024 };
+  const eyeRingScreen = (EYE.ring + EYE.ringWidth / 2) * FS * ZMAX;
+  const morph = interpolate(f, [I.morph[0], I.morph[1]], [0, 1], { ...clamp, easing: Easing.bezier(0.3, 0.9, 0.35, 1) });
+  const S0 = eyeRingScreen / ICON_RING;
+  const S1 = 150;
+  const size = Math.exp(lerp(Math.log(S0), Math.log(S1), morph));
+  const ringX = lerp(800, 800 + RING_OFF.x * S1, morph);
+  const ringY = lerp(500, 300 + RING_OFF.y * S1, morph);
+  const iconLeft = ringX - RING_OFF.x * size - size / 2;
+  const iconTop = ringY - RING_OFF.y * size - size / 2;
+  const showIcon = f >= I.morph[0];
+
   return (
     <Iris f={f} color={C.ink}>
-      <AbsoluteFill style={{ ...font, opacity: 1 - exit, transform: `scale(${1 + exit * 0.06})` }}>
+      <AbsoluteFill style={{ ...font, opacity: 1 - exit, transform: `scale(${1 + exit * 0.05})` }}>
+        {/* Quiet bubbles rising */}
+        {Array.from({ length: 16 }).map((_, i) => {
+          const speed = 2 + (i % 5) * 0.7;
+          const y = 1080 - ((f * speed + i * 137) % 1200);
+          const x = (i * 211) % 1600 + Math.sin(f / 20 + i) * 8;
+          const r = 4 + (i % 4) * 3;
+          return <div key={i} style={{ position: 'absolute', left: x, top: y, width: r * 2, height: r * 2, borderRadius: r, border: '2px solid rgba(255,255,255,0.22)', opacity: 1 - dive }} />;
+        })}
+
+        {f < I.morph[0] + 4 ? (
+          <div style={{ position: 'absolute', inset: 0, transformOrigin: '0 0', transform: `translate(${800 - focusX * z}px, ${500 - focusY * z}px) scale(${z})` }}>
+            <div style={{ position: 'absolute', left: fishLeft, top: fishTop, width: FISH_W * FS, height: FISH_H * FS }}>
+              <div style={{ transform: `scale(${FS})`, transformOrigin: '0 0' }}>
+                <Fish tail={Math.sin(f / 4) * 7 * (1 - dive)} fins={Math.sin(f / 6) * 4 * (1 - dive)} />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showIcon ? (
+          <Img src={staticFile('icon-4k.png')} style={{ position: 'absolute', left: iconLeft, top: iconTop, width: size, height: size, opacity: f >= I.morph[0] ? 1 : 0 }} />
+        ) : null}
+
         {CHIPS.map((chip, i) => {
           const s = pop(f, I.chips + i * 5, fps, 140, 15);
+          if (f < I.chips + i * 5) return null;
           const a = ((chip.a + f * 0.07) * Math.PI) / 180;
-          const x = 800 + Math.cos(a) * 640;
-          const y = 500 + Math.sin(a) * 380 + Math.sin(f / 30 + i) * 6;
+          const x = 800 + Math.cos(a) * 660;
+          const y = 470 + Math.sin(a) * 390 + Math.sin(f / 30 + i) * 6;
           return (
             <div
               key={chip.label}
               style={{
-                position: 'absolute', left: x, top: y, height: 68, padding: '0 28px 0 22px', borderRadius: 34, background: chip.c,
+                position: 'absolute', left: x, top: y, height: 66, padding: '0 28px 0 22px', borderRadius: 33, background: chip.c,
                 display: 'flex', alignItems: 'center', gap: 12, color: C.ink, fontSize: 26, fontWeight: 700, letterSpacing: -0.4,
                 transform: `translate(-50%, -50%) scale(${s})`, boxShadow: '0 16px 30px rgba(0,0,0,0.25)',
               }}
@@ -209,18 +265,17 @@ export const Intro: React.FC = () => {
             </div>
           );
         })}
-        <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <Img src={staticFile('icon.png')} style={{ width: 150, height: 150, transform: `scale(${icon})` }} />
-          <div style={{ height: 28 }} />
+
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 410, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 24 }}>
-            <Line f={f} start={I.title} size={128} color="#fff">Meet</Line>
-            <Line f={f} start={I.title + 5} size={170} serif color="#fff">Snapper.</Line>
+            <Line f={f} start={I.title} size={124} color="#fff">Meet</Line>
+            <Line f={f} start={I.title + 5} size={166} serif color="#fff">Snapper.</Line>
           </div>
-          <div style={{ height: 16 }} />
-          <Line f={f} start={I.sub} size={36} weight={500} color="rgba(255,255,255,0.7)">
+          <div style={{ height: 14 }} />
+          <Line f={f} start={I.sub} size={34} weight={500} color="rgba(255,255,255,0.7)">
             Capture, annotate and share from your menu bar.
           </Line>
-        </AbsoluteFill>
+        </div>
       </AbsoluteFill>
     </Iris>
   );

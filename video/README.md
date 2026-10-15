@@ -1,6 +1,6 @@
 # Snapper explainer video
 
-A Remotion project that renders the 46 second explainer on the launch page into `../site/media`.
+A Remotion project that renders the 48 second explainer on the launch page into `../site/media`.
 
 ```
 cd video
@@ -21,7 +21,7 @@ On Linux without Chrome, point Remotion at a Chromium build with `REMOTION_BROWS
 
 ## Narration
 
-The voice is Kokoro (open weights, Apache 2.0), run locally: a blend of 70 percent `am_onyx` (the deepest male voice) and 30 percent `am_michael` (the clearest), around 96 Hz. The clips are committed in `audio/vo`, so you only need Kokoro to change the script:
+The voice is Kokoro (open weights, Apache 2.0), run locally, then pitched down with pedalboard for depth. Five presets live at the top of `audio/voiceover.py` (A to E); the default is B, `am_michael` 2.5 semitones lower. Pick another with `VOICE_PRESET=C`. The clips are committed in `audio/vo`, so you only need Kokoro to change the script:
 
 ```
 pip install kokoro-onnx soundfile
@@ -38,4 +38,5 @@ The script lives in `src/timeline.json` under `voice`: each line has a cue point
 - `src/Product.tsx` is the editor walkthrough.
 - `src/Scenes.tsx` holds the type-driven scenes.
 - `audio/make_audio.py` builds the music and every sound effect from scratch, timed from `timeline.json`, and ducks the music under the narration.
+- `src/Fish.tsx` is the red snapper. Its eye and gill line are drawn like the app icon, so the intro can dive into the eye and hand over to the icon (`icon-4k.png`, rendered by `design/make_icons.py`) without a cut.
 - The app in the film ("Orbit") and the people in the chat are invented.

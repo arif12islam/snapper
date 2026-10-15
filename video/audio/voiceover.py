@@ -26,12 +26,24 @@ MODEL_DIR = os.path.expanduser(os.environ.get('KOKORO_DIR', '~/tts'))
 
 kokoro = Kokoro(os.path.join(MODEL_DIR, 'kokoro-v1.0.onnx'), os.path.join(MODEL_DIR, 'voices-v1.0.bin'))
 
-# A deep narrator: mostly am_onyx (the lowest male voice, about 89 Hz) with some
-# am_michael (the clearest male voice) blended in. Lands around 96 Hz.
-VOICE_NAME = 'onyx 70 / michael 30'
-VOICE = 0.7 * kokoro.get_voice_style('am_onyx') + 0.3 * kokoro.get_voice_style('am_michael')
-BASE_SPEED = 0.94   # a touch slower than normal, for weight
+# Narrator presets: a Kokoro voice, then a clean pitch shift down for depth (pedalboard).
+# Pick one with VOICE_PRESET=A..E; samples of each were compared side by side.
+PRESETS = {
+    'A': ('am_michael', 'en-us', 0.0),
+    'B': ('am_michael', 'en-us', -2.5),
+    'C': ('bm_george', 'en-gb', -3.0),
+    'D': ('am_fenrir', 'en-us', -3.5),
+    'E': ('am_puck', 'en-us', -2.0),
+}
+PRESET = os.environ.get('VOICE_PRESET', 'B')
+VOICE, LANG, SEMITONES = PRESETS[PRESET]
+VOICE_NAME = f'{PRESET}: {VOICE} {SEMITONES:+.1f} semitones'
+BASE_SPEED = 1.0
 MAX_SPEED = 1.12
+
+from pedalboard import Compressor, HighpassFilter, LowShelfFilter, Pedalboard, PitchShift
+CHAIN = Pedalboard(([PitchShift(semitones=SEMITONES)] if SEMITONES else []) + [
+    HighpassFilter(70), LowShelfFilter(cutoff_frequency_hz=180, gain_db=2.5), Compressor(threshold_db=-20, ratio=2.5)])
 
 out_dir = os.path.join(HERE, 'vo')
 os.makedirs(out_dir, exist_ok=True)
@@ -56,8 +68,9 @@ for n, cue in enumerate(TL['voice']):
     slot = (cue['until'] - local) / FPS
     speed = BASE_SPEED
     for _ in range(8):
-        audio, sr = kokoro.create(cue['text'], voice=VOICE, speed=speed, lang='en-us')
-        audio = trim(np.asarray(audio, dtype=np.float32), sr)
+        audio, sr = kokoro.create(cue['text'], voice=VOICE, speed=speed, lang=LANG)
+        audio = CHAIN(np.asarray(audio, dtype=np.float32), sr)
+        audio = trim(audio, sr)
         dur = len(audio) / sr
         if dur <= slot or speed >= MAX_SPEED:
             break

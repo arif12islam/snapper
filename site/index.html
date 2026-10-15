@@ -4,221 +4,223 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Snapper</title>
-<meta name="description" content="Screenshots that make the point. Capture, annotate, record and share from your Mac menu bar. Invite only.">
-<meta name="theme-color" content="#f4f3ef">
+<meta name="description" content="Screenshots that make the point. Capture, annotate, record and share from your Mac menu bar.">
+<meta name="theme-color" content="#cfe3fa">
 <meta property="og:title" content="Snapper">
-<meta property="og:description" content="Screenshots that make the point. Invite only.">
+<meta property="og:description" content="Screenshots that make the point.">
 <meta property="og:image" content="/og.png">
 <link rel="icon" type="image/png" href="/icon-192.png">
 <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/serif.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  @font-face {
-    font-family: "Inter";
-    src: url("/fonts/inter.woff2") format("woff2");
-    font-weight: 100 900;
-    font-display: swap;
-  }
+  @font-face { font-family: "Inter"; src: url("/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "Instrument Serif"; src: url("/fonts/serif.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Instrument Serif"; src: url("/fonts/serif-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+
   :root {
-    --paper: #f4f3ef;
+    /* The reef */
+    --ink: #1b1b4d;
+    --coral: #ff6b5b;
+    --coral-deep: #e8503f;
+    --blush: #ffc2b4;
+    --sun: #ffc94a;
+    --mint: #9ed9c0;
+    --lilac: #cdbef7;
+    --sky: #a9c9f5;
+    --surface: #dcebfc;
+    --mark: #ff3b30;
     --white: #ffffff;
-    --navy: #1b1b4d;
-    --ink: #16163a;
-    --muted: #5d6075;
-    --line: rgba(22, 22, 58, 0.14);
-    --red: #ff3b30;
-    --ok: #1f7a46;
-    --err: #c0392b;
+    --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   body {
-    margin: 0; background: var(--paper); color: var(--ink);
-    font: 17px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-feature-settings: "ss01", "cv11";
-    overflow-x: hidden;
+    margin: 0; color: var(--ink); font: 17px/1.6 var(--sans); overflow-x: hidden;
+    /* The one gradient: sea depth. Light at the surface, ink at the seabed. */
+    background: linear-gradient(180deg, var(--surface) 0%, var(--sky) 22%, #7fa3dd 40%, #4c63b0 58%, #2c3277 76%, var(--ink) 90%);
+    background-color: var(--ink);
   }
   a { color: inherit; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 32px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 3px solid var(--mark); outline-offset: 3px; }
 
-  /* ---------- Shared marker motif ---------- */
-  .draw path { fill: none; stroke: var(--red); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
-  .draw.on path { animation: ink 0.7s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
-  .draw.on path + path { animation-delay: 0.6s; animation-duration: 0.25s; }
-  @keyframes ink { to { stroke-dashoffset: 0; } }
-  .dot {
-    display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; flex: none;
-    background: var(--red); color: #fff; font-weight: 800; font-size: 18px; border: 3px solid #fff;
-    box-shadow: 0 4px 10px rgba(22, 22, 58, 0.18);
-  }
+  h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.015em; margin: 0; }
+  h1 { font-size: clamp(56px, 8.4vw, 118px); line-height: 0.95; }
+  h2 { font-size: clamp(42px, 5.4vw, 72px); line-height: 1; }
+  h3 { margin: 0 0 6px; font-size: 19px; letter-spacing: -0.01em; }
+  p { margin: 0; }
 
   /* ---------- Nav ---------- */
   nav { display: flex; align-items: center; gap: 28px; padding: 22px 0; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; margin-right: auto; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; margin-right: auto; letter-spacing: -0.02em; }
   .brand img { width: 30px; height: 30px; border-radius: 8px; }
-  nav a.link { font-size: 15px; font-weight: 600; text-decoration: none; color: var(--muted); }
-  nav a.link:hover { color: var(--ink); }
+  nav a.link { font-size: 15px; font-weight: 600; text-decoration: none; opacity: 0.72; }
+  nav a.link:hover { opacity: 1; }
   .pill {
-    display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px;
-    background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; text-decoration: none;
+    display: inline-flex; align-items: center; height: 42px; padding: 0 20px; border-radius: 999px;
+    background: var(--ink); color: var(--white); font-size: 15px; font-weight: 700; text-decoration: none;
   }
-  .pill:hover { background: var(--ink); }
 
   /* ---------- Hero ---------- */
-  .hero { padding: 72px 0 104px; }
-  .badge { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--muted); letter-spacing: 0.01em; }
-  .badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
-  h1 {
-    margin: 22px 0 0; font-size: clamp(56px, 10.2vw, 138px); line-height: 0.94; letter-spacing: -0.05em; font-weight: 800; color: var(--navy);
-  }
-  h1 .mark { position: relative; display: inline-block; white-space: nowrap; }
-  h1 .mark svg { position: absolute; left: -6%; top: -14%; width: 112%; height: 132%; overflow: visible; pointer-events: none; }
-  h1 .mark .dot { position: absolute; right: -0.18em; top: -0.02em; font-size: 0.16em; width: 2.4em; height: 2.4em; border-width: 0.16em; letter-spacing: 0; transform: scale(0); }
-  h1 .mark .dot.on { animation: popin 0.4s 0.75s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
-  @keyframes popin { to { transform: scale(1); } }
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding: 56px 0 120px; }
+  .hero h1 { max-width: 7.5em; }
+  .hero .mark { position: relative; white-space: nowrap; }
+  .hero .mark svg { position: absolute; left: -7%; top: 2%; width: 114%; height: 104%; overflow: visible; pointer-events: none; }
+  .lead { margin-top: 44px; font-size: 20px; max-width: 30em; color: rgba(27, 27, 77, 0.78); }
 
-  .hero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 56px; align-items: start; }
-  .lead { margin: 0; font-size: clamp(19px, 1.7vw, 22px); color: var(--muted); max-width: 30em; }
-  .lead b { color: var(--ink); font-weight: 600; }
-
-  .invite { position: relative; }
-  form { display: flex; gap: 8px; }
+  form { display: flex; gap: 8px; margin-top: 34px; max-width: 480px; }
   input[type="email"] {
     flex: 1; min-width: 0; height: 56px; padding: 0 18px; font: inherit; font-size: 17px; color: var(--ink);
-    background: var(--white); border: 2px solid var(--navy); border-radius: 14px; outline: none;
+    background: var(--white); border: 0; border-radius: 16px; outline: none; box-shadow: 0 1px 0 rgba(27, 27, 77, 0.08), 0 10px 24px rgba(27, 27, 77, 0.08);
   }
-  input[type="email"]::placeholder { color: #8a8ca0; }
-  input[type="email"]:focus-visible { box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.25); }
+  input[type="email"]::placeholder { color: #8186a8; }
+  input[type="email"]:focus-visible { box-shadow: 0 0 0 3px var(--mark); }
   .btn {
     height: 56px; padding: 0 24px; font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; white-space: nowrap;
-    color: #fff; background: var(--navy); border: 2px solid var(--navy); border-radius: 14px; transition: transform 0.12s;
+    color: var(--white); background: var(--ink); border: 0; border-radius: 16px;
   }
-  .btn:hover { background: var(--ink); }
-  .btn:active { transform: translateY(1px); }
+  .btn:hover { background: #26266a; }
   .btn:disabled { opacity: 0.6; cursor: default; }
-  .btn:focus-visible, .ctl:focus-visible, .tool:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-  .status { min-height: 1.5em; margin: 12px 0 0; font-size: 15px; color: var(--muted); }
-  .status.ok { color: var(--ok); }
-  .status.err { color: var(--err); }
-  .fine { margin: 0; font-size: 14px; color: var(--muted); }
+  .status { min-height: 1.5em; margin-top: 12px; font-size: 15px; }
+  .status.ok { color: #145c36; font-weight: 600; }
+  .status.err { color: #a3241b; font-weight: 600; }
+  .fine { font-size: 14px; color: rgba(27, 27, 77, 0.62); }
+
+  /* The snapper, annotated */
+  .specimen { position: relative; aspect-ratio: 1000 / 620; }
+  .specimen .fish { position: absolute; left: 0; top: 12%; width: 100%; height: auto; overflow: visible; animation: swim-in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .specimen .fish .body-bob { animation: bob 5s ease-in-out 1.4s infinite; transform-box: fill-box; }
+  .specimen .fish .tail { transform-origin: 150px 266px; animation: tail 1.2s ease-in-out infinite; }
+  .specimen .notes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .notes path { fill: none; stroke: var(--mark); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.7s 1.5s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
+  .notes path.later { animation-delay: 2.05s; animation-duration: 0.5s; }
+  .notes path.halo { stroke: var(--white); stroke-width: 14; }
+  .specimen .notes path { stroke-width: 7; }
+  .specimen .notes path.halo { stroke-width: 15; }
+  .callout {
+    position: absolute; right: 2%; top: -2%; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px;
+    background: var(--mark); color: var(--white); font-weight: 700; font-size: 16px; box-shadow: 0 8px 18px rgba(255, 59, 48, 0.28);
+    opacity: 0; transform: translateY(8px); animation: callout 0.5s 2.4s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
+  }
+  .num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--white); color: var(--mark); font-weight: 800; font-size: 15px; flex: none; }
+  @keyframes swim-in { from { transform: translateX(-26%) rotate(-3deg); opacity: 0; } }
+  @keyframes bob { 50% { transform: translateY(-10px) rotate(-1deg); } }
+  @keyframes tail { 50% { transform: rotate(7deg); } }
+  @keyframes ink { to { stroke-dashoffset: 0; } }
+  @keyframes callout { to { opacity: 1; transform: none; } }
 
   /* ---------- Film ---------- */
-  .film { background: var(--navy); color: #fff; padding: 88px 0 96px; }
-  .film-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
-  .eyebrow { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.6); margin: 0 0 8px; }
-  .film h2 { margin: 0; font-size: clamp(32px, 4.4vw, 56px); line-height: 1; letter-spacing: -0.04em; font-weight: 800; }
+  .film { padding: 0 0 120px; }
+  .film-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+  .film h2 { color: var(--ink); }
   .controls { display: flex; gap: 8px; flex: none; }
   .ctl {
-    display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 999px; cursor: pointer;
-    font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: transparent; border: 2px solid rgba(255, 255, 255, 0.35);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; min-width: 44px; padding: 0 16px; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: rgba(255, 255, 255, 0.6); border: 0;
   }
-  .ctl:hover { border-color: #fff; }
-  .ctl.hot { background: var(--red); border-color: var(--red); }
+  .ctl:hover { background: var(--white); }
+  .ctl.hot { background: var(--ink); color: var(--white); }
   .ctl svg { width: 18px; height: 18px; }
-  #cc { min-width: 56px; justify-content: center; letter-spacing: 0.04em; }
-  .screen video::cue { background: rgba(17, 17, 37, 0.85); color: #fff; font-family: Inter, sans-serif; font-weight: 600; font-size: 0.9em; }
-  .screen { position: relative; border-radius: 16px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.14); background: #13133a; }
+  .screen { border-radius: 22px; overflow: hidden; background: var(--ink); box-shadow: 0 40px 80px rgba(27, 27, 77, 0.28); }
   .screen video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
-  .chapters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 18px; }
+  .screen video::cue { background: rgba(27, 27, 77, 0.88); color: #fff; font-family: var(--sans); font-weight: 600; }
+  .chapters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
   .chapters button {
-    display: flex; align-items: center; gap: 10px; padding: 14px 0 0; text-align: left; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600;
-    color: rgba(255, 255, 255, 0.6); background: none; border: 0; border-top: 3px solid rgba(255, 255, 255, 0.16);
+    display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px; border-radius: 14px; cursor: pointer; text-align: left;
+    font: inherit; font-size: 15px; font-weight: 650; color: var(--ink); background: rgba(255, 255, 255, 0.45); border: 0;
   }
-  .chapters button.active { color: #fff; border-top-color: var(--red); }
-  .chapters .dot { width: 28px; height: 28px; font-size: 13px; border-width: 2px; box-shadow: none; }
-  .chapters button:not(.active) .dot { background: rgba(255, 255, 255, 0.16); border-color: transparent; }
+  .chapters button .num { width: 26px; height: 26px; font-size: 13px; background: var(--ink); color: var(--white); }
+  .chapters button.active { background: var(--white); }
+  .chapters button.active .num { background: var(--mark); }
+
+  /* ---------- Why a fish ---------- */
+  .why { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 64px; align-items: center; padding: 40px 0 140px; color: var(--white); }
+  .eye-zoom { position: relative; aspect-ratio: 1; max-width: 440px; }
+  .eye-zoom .disc { position: absolute; inset: 0; border-radius: 50%; background: var(--coral); overflow: hidden; }
+  .eye-zoom .disc svg { position: absolute; width: 280%; left: -186%; top: -12%; overflow: visible; }
+  .eye-zoom .icon { position: absolute; right: -6%; bottom: -4%; width: 34%; border-radius: 24%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+  .why h2 { color: var(--white); }
+  .why p { margin-top: 22px; font-size: 20px; max-width: 28em; color: rgba(255, 255, 255, 0.86); }
 
   /* ---------- Try it ---------- */
-  .try { padding: 112px 0; }
-  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 56px; align-items: center; }
-  .try h2.big { font-size: clamp(40px, 4.6vw, 66px); }
-  h2.big { margin: 0 0 18px; font-size: clamp(40px, 5.4vw, 76px); line-height: 0.98; letter-spacing: -0.045em; font-weight: 800; color: var(--navy); }
-  .try p { margin: 0 0 28px; color: var(--muted); font-size: 18px; }
-  .tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  .try { padding: 0 0 140px; color: var(--white); }
+  .try-head { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 28px; }
+  .try-head p { margin-top: 14px; font-size: 18px; color: rgba(255, 255, 255, 0.82); max-width: 30em; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .tool {
-    display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 12px; cursor: pointer;
-    font: inherit; font-size: 15px; font-weight: 700; color: var(--navy); background: var(--white); border: 2px solid var(--line);
+    display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 15px; border-radius: 12px; cursor: pointer;
+    font: inherit; font-size: 15px; font-weight: 700; color: var(--white); background: rgba(255, 255, 255, 0.12); border: 0;
   }
   .tool svg { width: 18px; height: 18px; }
-  .tool[aria-pressed="true"] { border-color: var(--navy); background: var(--navy); color: #fff; }
-  .tool.quiet { color: var(--muted); }
-  .board {
-    position: relative; border-radius: 16px; overflow: hidden; background: var(--white); border: 2px solid var(--navy);
-    box-shadow: 10px 10px 0 var(--navy); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair;
-  }
+  .tool[aria-pressed="true"] { background: var(--white); color: var(--ink); }
+  .swatches { display: flex; gap: 6px; margin-left: 6px; }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.35); cursor: pointer; padding: 0; }
+  .swatch[aria-pressed="true"] { border-color: var(--white); transform: scale(1.12); }
+  .stage { --frame: var(--coral); background: var(--frame); border-radius: 26px; padding: clamp(18px, 4vw, 52px); transition: background 0.35s ease; }
+  .board { position: relative; border-radius: 14px; overflow: hidden; background: var(--white); box-shadow: 0 30px 60px rgba(27, 27, 77, 0.3); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
   .board img { display: block; width: 100%; height: auto; aspect-ratio: 11 / 7; pointer-events: none; }
   .board canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .hint {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px; border-radius: 999px;
-    background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; pointer-events: none; transition: opacity 0.3s;
-    animation: bob 1.8s ease-in-out infinite;
-  }
-  @keyframes bob { 50% { transform: translate(-50%, calc(-50% - 6px)); } }
+  .hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 700; pointer-events: none; transition: opacity 0.3s; }
   .board.used .hint { opacity: 0; }
 
-  /* ---------- Steps ---------- */
-  .steps { padding: 0 0 112px; }
-  .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; margin-top: 48px; }
-  .step { border-top: 2px solid var(--navy); padding-top: 22px; }
-  .step h3 { margin: 18px 0 8px; font-size: 22px; letter-spacing: -0.02em; color: var(--navy); }
-  .step p { margin: 0; color: var(--muted); font-size: 16px; }
-  kbd {
-    display: inline-grid; place-items: center; min-width: 34px; height: 34px; padding: 0 8px; margin: 14px 4px 0 0; border-radius: 9px;
-    font: 700 15px/1 inherit; color: var(--navy); background: var(--white); border: 2px solid var(--navy); box-shadow: 0 3px 0 var(--navy);
+  /* ---------- Steps (a real sequence, so it is numbered) ---------- */
+  .steps { padding: 0 0 140px; color: var(--white); }
+  .steps ol { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; counter-reset: step; }
+  .steps li { counter-increment: step; }
+  .steps li::before {
+    content: counter(step); display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 18px; border-radius: 50%;
+    background: var(--mark); color: var(--white); font-weight: 800; border: 3px solid var(--white);
   }
+  .steps p { color: rgba(255, 255, 255, 0.78); font-size: 16px; }
+  kbd { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 8px; margin: 14px 4px 0 0; border-radius: 9px; font: 700 15px/1 var(--sans); color: var(--ink); background: var(--white); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
 
-  /* ---------- Toolkit wall ---------- */
-  .wall { background: var(--navy); color: #fff; padding: 96px 0; }
-  .wall .eyebrow { margin-bottom: 26px; }
-  .words { margin: 0; font-size: clamp(30px, 4.6vw, 64px); line-height: 1.12; letter-spacing: -0.04em; font-weight: 800; }
-  .words span { transition: color 0.2s; white-space: nowrap; }
-  .words span:hover { color: var(--red); }
-  .words em { font-style: normal; color: var(--red); padding: 0 0.12em; font-weight: 500; }
+  /* ---------- Everything it does ---------- */
+  .tools-list { padding: 0 0 140px; color: var(--white); }
+  .tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; max-width: 980px; }
+  .tags span { padding: 10px 18px; border-radius: 999px; font-size: 17px; font-weight: 650; color: var(--ink); }
+  .tags .c1 { background: var(--coral); } .tags .c2 { background: var(--sun); } .tags .c3 { background: var(--mint); }
+  .tags .c4 { background: var(--lilac); } .tags .c5 { background: var(--sky); } .tags .c6 { background: var(--blush); }
 
-  /* ---------- Closing ---------- */
-  .closing { background: var(--red); color: #fff; padding: 104px 0; }
-  .closing h2 { margin: 0; font-size: clamp(56px, 11vw, 160px); line-height: 0.9; letter-spacing: -0.055em; font-weight: 800; }
-  .closing-row { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-top: 36px; }
-  .closing p { margin: 0; font-size: 20px; max-width: 26em; color: rgba(255, 255, 255, 0.9); }
-  .closing .btn { background: #fff; color: var(--red); border-color: #fff; display: inline-flex; align-items: center; text-decoration: none; }
-  .closing .btn:hover { background: var(--paper); }
-
-  footer { background: var(--navy); color: rgba(255, 255, 255, 0.6); font-size: 14px; }
-  footer .wrap { display: flex; justify-content: space-between; gap: 16px; padding-top: 28px; padding-bottom: 32px; }
-
-  /* ---------- Entrance ---------- */
-  .rise { animation: rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-  .d1 { animation-delay: 0.08s; } .d2 { animation-delay: 0.16s; } .d3 { animation-delay: 0.24s; }
-  @keyframes rise { from { opacity: 0; transform: translateY(24px); } }
+  /* ---------- Seabed ---------- */
+  .seabed { padding: 40px 0 120px; color: var(--white); text-align: center; }
+  .seabed h2 { font-size: clamp(56px, 9vw, 128px); }
+  .seabed p { margin: 20px auto 0; max-width: 30em; font-size: 19px; color: rgba(255, 255, 255, 0.8); }
+  .seabed .btn { display: inline-flex; align-items: center; margin-top: 32px; background: var(--coral); color: var(--ink); text-decoration: none; }
+  .seabed .btn:hover { background: var(--blush); }
+  footer { color: rgba(255, 255, 255, 0.55); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; padding-top: 24px; padding-bottom: 36px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    .draw path { stroke-dashoffset: 0; }
-    h1 .mark .dot { transform: none; }
+    .notes path { stroke-dashoffset: 0; }
+    .callout { opacity: 1; transform: none; }
   }
-
   @media (max-width: 980px) {
-    .hero-row, .split { grid-template-columns: 1fr; gap: 36px; }
-    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .hero, .why { grid-template-columns: 1fr; }
+    .hero { padding-bottom: 88px; }
+    .specimen { max-width: 620px; }
+    .why { gap: 40px; }
+    .eye-zoom { max-width: 320px; }
+    .steps ol { grid-template-columns: 1fr 1fr; }
+    .try-head { flex-direction: column; align-items: start; }
   }
-  @media (max-width: 640px) {
+  @media (max-width: 620px) {
     .wrap { padding: 0 18px; }
     nav a.link { display: none; }
-    .hero { padding: 40px 0 72px; }
-    .hero-row { margin-top: 36px; }
+    .hero { padding-top: 24px; }
+    .lead { font-size: 18px; }
     form { flex-direction: column; }
     input[type="email"] { flex: none; width: 100%; }
-    .btn { width: 100%; }
-    .film { padding: 64px 0 72px; }
+    form .btn { width: 100%; }
     .film-head { flex-direction: column; align-items: start; }
-    .chapters { grid-template-columns: 1fr 1fr; row-gap: 10px; }
-    .try { padding: 80px 0; }
-    .board { box-shadow: 6px 6px 0 var(--navy); }
-    .steps { padding-bottom: 80px; }
-    .steps-grid { grid-template-columns: 1fr; gap: 28px; }
-    .wall, .closing { padding: 72px 0; }
-    .closing-row { flex-direction: column; align-items: stretch; }
+    .chapters { grid-template-columns: 1fr 1fr; }
+    .steps ol { grid-template-columns: 1fr; }
+    .film, .try, .steps, .tools-list { padding-bottom: 96px; }
+    .why { padding-bottom: 96px; }
+    .callout { font-size: 14px; right: 0; }
     footer .wrap { flex-direction: column; }
   }
 </style>
@@ -229,26 +231,57 @@
   <nav>
     <a class="brand" href="/"><img src="/icon-192.png" alt="" width="30" height="30">Snapper</a>
     <a class="link" href="#film">Watch</a>
+    <a class="link" href="#why">The name</a>
     <a class="link" href="#try">Try it</a>
     <a class="pill" href="#request">Request access</a>
   </nav>
 
   <header class="hero" id="request">
-    <div class="badge rise"><i></i>Invite only, for Mac</div>
-    <h1 class="rise d1">Screenshots<br>that make<br><span class="mark">the point.<svg class="draw" id="circle" viewBox="0 0 400 105" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 30 C 300 4.5, 120 3, 46 22.5 C -4 37.5, 6 84, 90 96 C 190 109.5, 360 100.5, 392 69 C 410 48, 380 25.5, 330 16.5"/></svg><span class="dot" id="pointdot" aria-hidden="true">1</span></span></h1>
+    <div>
+      <h1>Screenshots that make the <span class="mark">point.<svg class="notes" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 34 C 300 4, 120 2, 46 26 C -4 46, 6 106, 90 122 C 190 140, 360 128, 392 88 C 410 60, 380 30, 330 18"/></svg></span></h1>
+      <p class="lead">Snapper is a menu bar app for Mac. Capture any part of your screen, mark it up, record it, and share it as an image or a link.</p>
+      <form class="invite-form" novalidate>
+        <label class="sr" for="email">Email address</label>
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn" type="submit">Request access</button>
+      </form>
+      <p class="status" role="status" aria-live="polite"></p>
+      <p class="fine">If your email is on the invite list, we send you a download link. Apple Silicon, macOS 14 or later.</p>
+    </div>
 
-    <div class="hero-row">
-      <p class="lead rise d2">Capture any part of your screen, <b>mark it up in seconds</b>, then paste it as an image or share it as a link. Snapper lives in your menu bar and stays out of the way until you need it.</p>
-      <div class="invite rise d3">
-        <form class="invite-form" novalidate>
-          <label class="sr" for="email">Email address</label>
-          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
-          <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <button class="btn" type="submit">Request access</button>
-        </form>
-        <p class="status" role="status" aria-live="polite"></p>
-        <p class="fine">On the invite list? A download link lands in your inbox. Apple Silicon, macOS 14 or later.</p>
-      </div>
+    <div class="specimen" aria-label="A red snapper, with its eye circled and labelled: our icon, up close">
+      <svg class="fish" viewBox="0 0 1000 520" aria-hidden="true">
+        <defs><clipPath id="fishbody"><path d="M 968 268 C 950 205, 892 150, 800 126 C 650 90, 430 106, 290 156 C 220 182, 168 212, 132 232 L 132 300 C 172 320, 232 352, 302 374 C 470 424, 700 428, 832 384 C 904 358, 952 322, 968 268 Z"/></clipPath></defs>
+        <g class="body-bob">
+          <g class="tail">
+            <path d="M 150 244 C 104 196, 62 136, 18 96 C 40 170, 56 228, 74 266 C 56 304, 40 362, 18 436 C 62 396, 104 336, 150 288 Z" fill="#ff6b5b"/>
+            <path d="M 150 244 C 118 210, 86 166, 54 128 C 70 190, 82 236, 96 266 C 82 296, 70 342, 54 404 C 86 366, 118 322, 150 288 Z" fill="#e8503f"/>
+          </g>
+          <path d="M 742 128 L 716 56 L 684 112 L 656 46 L 624 106 L 596 44 L 562 104 C 506 70, 426 72, 364 110 C 340 124, 320 140, 306 152 Z" fill="#e8503f"/>
+          <path d="M 404 398 C 364 446, 302 466, 250 460 C 280 424, 312 398, 344 386 Z" fill="#e8503f"/>
+          <path d="M 650 408 C 618 456, 566 486, 524 490 C 550 454, 572 424, 598 408 Z" fill="#e8503f"/>
+          <path d="M 968 268 C 950 205, 892 150, 800 126 C 650 90, 430 106, 290 156 C 220 182, 168 212, 132 232 L 132 300 C 172 320, 232 352, 302 374 C 470 424, 700 428, 832 384 C 904 358, 952 322, 968 268 Z" fill="#ff6b5b"/>
+          <g clip-path="url(#fishbody)">
+            <path d="M 980 250 C 880 236, 700 222, 470 228 C 330 232, 220 244, 120 262 L 120 60 L 980 60 Z" fill="#f0584a"/>
+            <path d="M 950 300 C 840 330, 640 352, 430 346 C 320 342, 220 326, 140 300 L 140 470 L 950 470 Z" fill="#ffc2b4"/>
+            <path d="M 700 250 C 560 236, 380 240, 170 262" stroke="#ff8a7c" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </g>
+          <path d="M 712 296 C 652 312, 610 342, 588 378 C 640 372, 690 346, 724 316 Z" fill="#ff8a7c"/>
+          <path d="M 764 150 C 738 214, 734 296, 768 368" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/>
+          <path d="M 968 268 L 922 278" stroke="#1b1b4d" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="842" cy="222" r="56" fill="#1b1b4d"/>
+          <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
+        </g>
+      </svg>
+      <!-- Annotation layer, in the same coordinates as the fish (offset by the fish's 12% top margin) -->
+      <svg class="notes" viewBox="0 0 1000 620" aria-hidden="true">
+        <path class="halo" pathLength="1" d="M 934 300 C 938 236, 884 204, 840 206 C 776 208, 748 256, 752 302 C 756 352, 808 388, 856 384 C 912 378, 940 338, 928 290"/>
+        <path class="halo later" pathLength="1" d="M 912 52 C 936 100, 924 160, 890 204"/>
+        <path pathLength="1" d="M 934 300 C 938 236, 884 204, 840 206 C 776 208, 748 256, 752 302 C 756 352, 808 388, 856 384 C 912 378, 940 338, 928 290"/>
+        <path class="later" pathLength="1" d="M 912 52 C 936 100, 924 160, 890 204"/>
+      </svg>
+      <div class="callout"><span class="num">1</span>Our icon, up close</div>
     </div>
   </header>
 </div>
@@ -256,13 +289,10 @@
 <section class="film" id="film">
   <div class="wrap">
     <div class="film-head">
-      <div>
-        <p class="eyebrow">The 46 second tour</p>
-        <h2>From screen to shared.</h2>
-      </div>
+      <h2>See it in 48 seconds.</h2>
       <div class="controls">
         <button class="ctl" id="sound" type="button" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="wave" d="M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10"/></svg>
           <span>Sound on</span>
         </button>
         <button class="ctl" id="cc" type="button" aria-pressed="false" aria-label="Captions">CC</button>
@@ -273,76 +303,100 @@
     </div>
     <div class="screen">
       <video id="film-video" autoplay muted loop playsinline preload="metadata" poster="/media/snapper-poster.jpg"
-             aria-label="Snapper tour: capture an area, annotate it, frame it, share a link, record and trim">
+             aria-label="Snapper tour: a snapper fish becomes the app icon, then a screenshot is captured, annotated, framed, shared, recorded and trimmed">
         <source src="/media/snapper-explainer.mp4" type="video/mp4">
         <source src="/media/snapper-explainer.webm" type="video/webm">
         <track kind="captions" src="/media/snapper-explainer.vtt" srclang="en" label="English">
       </video>
     </div>
     <div class="chapters" id="chapters">
-      <button type="button" data-t="14"><span class="dot">1</span>Capture</button>
-      <button type="button" data-t="17.2"><span class="dot">2</span>Mark it up</button>
-      <button type="button" data-t="25.3"><span class="dot">3</span>Frame it</button>
-      <button type="button" data-t="27.8"><span class="dot">4</span>Share it</button>
+      <button type="button" data-t="16"><span class="num">1</span>Capture</button>
+      <button type="button" data-t="19.3"><span class="num">2</span>Mark it up</button>
+      <button type="button" data-t="27.4"><span class="num">3</span>Frame it</button>
+      <button type="button" data-t="29.9"><span class="num">4</span>Share it</button>
     </div>
   </div>
 </section>
 
+<section class="wrap why" id="why">
+  <div class="eye-zoom" aria-hidden="true">
+    <div class="disc">
+      <svg viewBox="0 0 1000 520">
+        <path d="M 2000 250 C 880 236, 700 222, 470 228 C 200 232, -500 240, -1000 250 L -1000 -600 L 2000 -600 Z" fill="#f0584a"/>
+        <path d="M 764 150 C 738 214, 734 296, 768 368" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <circle cx="842" cy="222" r="56" fill="#1b1b4d"/>
+        <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
+      </svg>
+    </div>
+    <img class="icon" src="/icon-192.png" alt="" width="192" height="192">
+  </div>
+  <div>
+    <h2>Why a fish?</h2>
+    <p>Snappers are reef fish with large, sharp eyes. Our icon is a close-up of one: the ring is its eye, the white curve is the edge of its gill.</p>
+    <p>A screenshot tool should notice the details too. That is the whole idea.</p>
+  </div>
+</section>
+
 <section class="try" id="try">
-  <div class="wrap split">
-    <div>
-      <h2 class="big">Go on.<br>Mark it up.</h2>
-      <p>Drag across the screenshot to draw. Same tools, same red as the app.</p>
-      <div class="tools" role="group" aria-label="Annotation tool">
-        <button class="tool" type="button" data-tool="arrow" aria-pressed="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M10 5h9v9"/></svg>Arrow
-        </button>
-        <button class="tool" type="button" data-tool="box" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Box
-        </button>
-        <button class="tool" type="button" data-tool="number" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M11 9l2-1v8" stroke-linecap="round" stroke-linejoin="round"/></svg>Number
-        </button>
-        <button class="tool quiet" type="button" id="undo">Undo</button>
-        <button class="tool quiet" type="button" id="clear">Clear</button>
+  <div class="wrap">
+    <div class="try-head">
+      <div>
+        <h2>Try the arrow.</h2>
+        <p>Drag across the screenshot to draw. Pick a background colour the way you would in the app.</p>
+      </div>
+      <div class="toolbar" role="group" aria-label="Drawing tools">
+        <button class="tool" type="button" data-tool="arrow" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M10 5h9v9"/></svg>Arrow</button>
+        <button class="tool" type="button" data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Box</button>
+        <button class="tool" type="button" data-tool="number" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M11 9l2-1v8" stroke-linecap="round" stroke-linejoin="round"/></svg>Number</button>
+        <button class="tool" type="button" id="undo">Undo</button>
+        <button class="tool" type="button" id="clear">Clear</button>
+        <div class="swatches" role="group" aria-label="Background colour">
+          <button class="swatch" type="button" data-frame="#ff6b5b" style="background:#ff6b5b" aria-label="Coral background" aria-pressed="true"></button>
+          <button class="swatch" type="button" data-frame="#ffc94a" style="background:#ffc94a" aria-label="Sun background" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-frame="#9ed9c0" style="background:#9ed9c0" aria-label="Mint background" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-frame="#cdbef7" style="background:#cdbef7" aria-label="Lilac background" aria-pressed="false"></button>
+        </div>
       </div>
     </div>
-    <div class="board" id="board">
-      <img src="/media/app-shot.png" alt="A sample analytics dashboard to draw on" width="1100" height="700">
-      <canvas id="ink" aria-label="Drawing area"></canvas>
-      <div class="hint">Drag to draw an arrow</div>
+    <div class="stage" id="stage">
+      <div class="board" id="board">
+        <img src="/media/app-shot.png" alt="A sample analytics dashboard to draw on" width="1100" height="700">
+        <canvas id="ink" aria-label="Drawing area"></canvas>
+        <div class="hint">Drag to draw an arrow</div>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="steps">
   <div class="wrap">
-    <h2 class="big">Four steps.<br>No app switching.</h2>
-    <div class="steps-grid">
-      <div class="step"><span class="dot">1</span><h3>Capture</h3><p>Press a shortcut and pick an area, a window, the whole screen or a long scrolling page.</p></div>
-      <div class="step"><span class="dot">2</span><h3>Mark it up</h3><p>Arrows, boxes, numbered steps, text, a magnifier and blur. All of it stays editable.</p></div>
-      <div class="step"><span class="dot">3</span><h3>Frame it</h3><p>Drop the shot on a background with padding and rounded corners, ready for a slide.</p></div>
-      <div class="step"><span class="dot">4</span><h3>Share it</h3><p>Copy the image, or upload it and paste the link straight into chat.</p><kbd>&#8984;</kbd><kbd>V</kbd></div>
+    <h2>How it works</h2>
+    <ol>
+      <li><h3>Capture</h3><p>Press a shortcut and pick an area, a window, the whole screen or a long scrolling page.</p></li>
+      <li><h3>Mark it up</h3><p>Arrows, boxes, numbered steps, text, a magnifier and blur. All of it stays editable.</p></li>
+      <li><h3>Frame it</h3><p>Drop the shot on a coloured background with padding and rounded corners.</p></li>
+      <li><h3>Share it</h3><p>Copy the image, or upload it and paste the link straight into chat.</p><kbd>&#8984;</kbd><kbd>V</kbd></li>
+    </ol>
+  </div>
+</section>
+
+<section class="tools-list">
+  <div class="wrap">
+    <h2>Everything it does</h2>
+    <div class="tags">
+      <span class="c1">Area</span><span class="c2">Window</span><span class="c3">Full screen</span><span class="c4">Scrolling capture</span><span class="c5">Text from images</span>
+      <span class="c6">Arrows</span><span class="c1">Boxes</span><span class="c2">Numbered steps</span><span class="c3">Text</span><span class="c4">Highlighter</span>
+      <span class="c5">Magnifier</span><span class="c6">Blur</span><span class="c1">Spotlight</span><span class="c2">Crop</span><span class="c3">Backgrounds</span>
+      <span class="c4">Screen recording</span><span class="c5">GIFs</span><span class="c6">Trim</span><span class="c1">Pin to screen</span><span class="c2">Share links</span>
     </div>
   </div>
 </section>
 
-<section class="wall">
+<section class="seabed">
   <div class="wrap">
-    <p class="eyebrow">Everything in the box</p>
-    <p class="words">
-      <span>Area</span> <em>/</em> <span>Window</span> <em>/</em> <span>Full screen</span> <em>/</em> <span>Scrolling capture</span> <em>/</em> <span>Text from images</span> <em>/</em> <span>Arrows</span> <em>/</em> <span>Boxes</span> <em>/</em> <span>Numbered steps</span> <em>/</em> <span>Text</span> <em>/</em> <span>Highlighter</span> <em>/</em> <span>Magnifier</span> <em>/</em> <span>Blur</span> <em>/</em> <span>Spotlight</span> <em>/</em> <span>Crop</span> <em>/</em> <span>Backgrounds</span> <em>/</em> <span>Screen recording</span> <em>/</em> <span>GIFs</span> <em>/</em> <span>Trim</span> <em>/</em> <span>Pin to screen</span> <em>/</em> <span>Share links</span>
-    </p>
-  </div>
-</section>
-
-<section class="closing">
-  <div class="wrap">
-    <h2>Get in early.</h2>
-    <div class="closing-row">
-      <p>Snapper is in a private alpha. Leave your email and, if you are on the list, the download link is yours.</p>
-      <a class="btn" href="#request" id="to-form">Request access</a>
-    </div>
+    <h2>Get early access.</h2>
+    <p>Snapper is in a private alpha. Leave your email, and if you are on the list, the download link is yours.</p>
+    <a class="btn" href="#request">Request access</a>
   </div>
 </section>
 
@@ -357,41 +411,21 @@
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ---------- Marker strokes in the hero ----------
-  setTimeout(function () {
-    document.getElementById("circle").classList.add("on");
-    document.getElementById("pointdot").classList.add("on");
-  }, reduce ? 0 : 650);
-
   // ---------- Invite form ----------
   var form = document.querySelector(".invite-form");
   var input = document.getElementById("email");
   var button = form.querySelector("button");
   var statusEl = document.querySelector(".status");
-  function show(text, kind) {
-    statusEl.textContent = text;
-    statusEl.className = "status" + (kind ? " " + kind : "");
-  }
+  function show(text, kind) { statusEl.textContent = text; statusEl.className = "status" + (kind ? " " + kind : ""); }
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     var email = input.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      show("Enter a valid email address.", "err");
-      input.focus();
-      return;
-    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { show("Enter a valid email address.", "err"); input.focus(); return; }
     button.disabled = true;
     show("Sending...", "");
-    fetch("/api/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, website: form.elements.website.value })
-    })
+    fetch("/api/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, website: form.elements.website.value }) })
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
-      .then(function (r) {
-        if (r.ok) { show(r.data.message, "ok"); input.value = ""; }
-        else { show(r.data.error || "Something went wrong. Please try again.", "err"); }
-      })
+      .then(function (r) { if (r.ok) { show(r.data.message, "ok"); input.value = ""; } else { show(r.data.error || "Something went wrong. Please try again.", "err"); } })
       .catch(function () { show("Could not reach the server. Check your connection and try again.", "err"); })
       .then(function () { button.disabled = false; });
   });
@@ -402,29 +436,24 @@
   // ---------- Film ----------
   var video = document.getElementById("film-video");
   var sound = document.getElementById("sound");
+  var cc = document.getElementById("cc");
   var playpause = document.getElementById("playpause");
   var pauseSvg = playpause.innerHTML;
   var playSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
   if (reduce) { video.removeAttribute("autoplay"); video.pause(); }
-  function syncPlay() {
-    playpause.innerHTML = video.paused ? playSvg : pauseSvg;
-    playpause.setAttribute("aria-label", video.paused ? "Play" : "Pause");
-  }
+  function syncPlay() { playpause.innerHTML = video.paused ? playSvg : pauseSvg; playpause.setAttribute("aria-label", video.paused ? "Play" : "Pause"); }
   playpause.addEventListener("click", function () { if (video.paused) video.play(); else video.pause(); });
   video.addEventListener("play", syncPlay);
   video.addEventListener("pause", syncPlay);
   syncPlay();
-
   sound.addEventListener("click", function () {
-    var turningOn = video.muted;
-    video.muted = !turningOn;
-    if (turningOn) { video.currentTime = 0; video.play(); }
-    sound.classList.toggle("hot", turningOn);
-    sound.setAttribute("aria-pressed", String(turningOn));
-    sound.querySelector("span").textContent = turningOn ? "Sound off" : "Sound on";
+    var on = video.muted;
+    video.muted = !on;
+    if (on) { video.currentTime = 0; video.play(); }
+    sound.classList.toggle("hot", on);
+    sound.setAttribute("aria-pressed", String(on));
+    sound.querySelector("span").textContent = on ? "Sound off" : "Sound on";
   });
-
-  var cc = document.getElementById("cc");
   function captions(on) {
     var track = video.textTracks && video.textTracks[0];
     if (track) track.mode = on ? "showing" : "hidden";
@@ -433,25 +462,28 @@
   }
   cc.addEventListener("click", function () { captions(cc.getAttribute("aria-pressed") !== "true"); });
   captions(false);
-
   var chapterButtons = Array.prototype.slice.call(document.querySelectorAll("#chapters button"));
   var marks = chapterButtons.map(function (b) { return parseFloat(b.dataset.t); });
-  chapterButtons.forEach(function (b) {
-    b.addEventListener("click", function () { video.currentTime = parseFloat(b.dataset.t); video.play(); });
-  });
+  chapterButtons.forEach(function (b) { b.addEventListener("click", function () { video.currentTime = parseFloat(b.dataset.t); video.play(); }); });
   video.addEventListener("timeupdate", function () {
     var t = video.currentTime, active = -1;
-    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 29.9) active = i;
+    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 31.9) active = i;
     chapterButtons.forEach(function (b, i) { b.classList.toggle("active", i === active); });
   });
 
-  // ---------- Try it: a tiny annotation canvas ----------
+  // ---------- Try it ----------
+  var stage = document.getElementById("stage");
+  document.querySelectorAll(".swatch").forEach(function (s) {
+    s.addEventListener("click", function () {
+      stage.style.setProperty("--frame", s.dataset.frame);
+      document.querySelectorAll(".swatch").forEach(function (o) { o.setAttribute("aria-pressed", String(o === s)); });
+    });
+  });
   var board = document.getElementById("board");
   var canvas = document.getElementById("ink");
   var ctx = canvas.getContext("2d");
   var W = 1100, H = 700, RED = "#ff3b30";
   var tool = "arrow", shapes = [], live = null;
-
   document.querySelectorAll(".tool[data-tool]").forEach(function (b) {
     b.addEventListener("click", function () {
       tool = b.dataset.tool;
@@ -461,104 +493,48 @@
   });
   document.getElementById("undo").addEventListener("click", function () { shapes.pop(); draw(); });
   document.getElementById("clear").addEventListener("click", function () { shapes = []; draw(); });
-
-  function size() {
-    var r = board.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(r.width * dpr);
-    canvas.height = Math.round(r.height * dpr);
-    draw();
-  }
-  function toImage(e) {
-    var r = canvas.getBoundingClientRect();
-    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-  }
+  function size() { var r = board.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr); draw(); }
+  function toImage(e) { var r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
   function arrow(s) {
     var dx = s.x1 - s.x0, dy = s.y1 - s.y0, len = Math.hypot(dx, dy);
     if (len < 4) return;
     var a = Math.atan2(dy, dx), head = Math.min(30, len * 0.5);
-    ctx.beginPath();
-    ctx.moveTo(s.x0, s.y0);
-    ctx.lineTo(s.x1 - Math.cos(a) * head * 0.6, s.y1 - Math.sin(a) * head * 0.6);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(s.x1, s.y1);
+    ctx.beginPath(); ctx.moveTo(s.x0, s.y0); ctx.lineTo(s.x1 - Math.cos(a) * head * 0.6, s.y1 - Math.sin(a) * head * 0.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1);
     ctx.lineTo(s.x1 - head * Math.cos(a - 0.45), s.y1 - head * Math.sin(a - 0.45));
     ctx.lineTo(s.x1 - head * Math.cos(a + 0.45), s.y1 - head * Math.sin(a + 0.45));
-    ctx.closePath();
-    ctx.fill();
+    ctx.closePath(); ctx.fill();
   }
   function box(s) {
     var x = Math.min(s.x0, s.x1), y = Math.min(s.y0, s.y1), w = Math.abs(s.x1 - s.x0), h = Math.abs(s.y1 - s.y0);
     if (w < 3 && h < 3) return;
     var r = Math.min(10, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); ctx.stroke();
   }
   function number(s) {
-    ctx.beginPath();
-    ctx.arc(s.x0, s.y0, 24, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "#fff";
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "800 24px Inter, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(String(s.n), s.x0, s.y0 + 1);
+    ctx.beginPath(); ctx.arc(s.x0, s.y0, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "800 24px Inter, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(s.n), s.x0, s.y0 + 1);
   }
   function draw() {
     var sx = canvas.width / W, sy = canvas.height / H;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(sx, 0, 0, sy, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.setTransform(sx, 0, 0, sy, 0, 0);
     shapes.concat(live ? [live] : []).forEach(function (s) {
-      ctx.save();
-      ctx.strokeStyle = RED;
-      ctx.fillStyle = RED;
-      ctx.lineWidth = 7;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.shadowColor = "rgba(0,0,0,0.22)";
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetY = 2;
-      if (s.type === "arrow") arrow(s);
-      else if (s.type === "box") box(s);
-      else number(s);
+      ctx.save(); ctx.strokeStyle = RED; ctx.fillStyle = RED; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.shadowColor = "rgba(0,0,0,0.22)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+      if (s.type === "arrow") arrow(s); else if (s.type === "box") box(s); else number(s);
       ctx.restore();
     });
   }
   canvas.addEventListener("pointerdown", function (e) {
     board.classList.add("used");
     var p = toImage(e);
-    if (tool === "number") {
-      var n = shapes.filter(function (s) { return s.type === "number"; }).length + 1;
-      shapes.push({ type: "number", x0: p.x, y0: p.y, n: n });
-      draw();
-      return;
-    }
+    if (tool === "number") { var n = shapes.filter(function (s) { return s.type === "number"; }).length + 1; shapes.push({ type: "number", x0: p.x, y0: p.y, n: n }); draw(); return; }
     canvas.setPointerCapture(e.pointerId);
     live = { type: tool, x0: p.x, y0: p.y, x1: p.x, y1: p.y };
   });
-  canvas.addEventListener("pointermove", function (e) {
-    if (!live) return;
-    var p = toImage(e);
-    live.x1 = p.x;
-    live.y1 = p.y;
-    draw();
-  });
-  function finish() {
-    if (!live) return;
-    if (Math.hypot(live.x1 - live.x0, live.y1 - live.y0) > 6) shapes.push(live);
-    live = null;
-    draw();
-  }
+  canvas.addEventListener("pointermove", function (e) { if (!live) return; var p = toImage(e); live.x1 = p.x; live.y1 = p.y; draw(); });
+  function finish() { if (!live) return; if (Math.hypot(live.x1 - live.x0, live.y1 - live.y0) > 6) shapes.push(live); live = null; draw(); }
   canvas.addEventListener("pointerup", finish);
   canvas.addEventListener("pointercancel", finish);
   window.addEventListener("resize", size);

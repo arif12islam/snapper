@@ -327,7 +327,9 @@ events += [
     (H + hk['circle'][0], sfx_marker((hk['circle'][1] - hk['circle'][0]) / FPS + 0.1), 1.0),
     (H + hk['arrow'][0], sfx_marker((hk['head'][1] - hk['arrow'][0]) / FPS + 0.05), 1.0),
     (H + hk['counter'], sfx_pop(), 1.0),
-    (I + TL['intro']['icon'], sfx_pop(), 0.8),
+    (I + TL['intro']['swim'][0], sfx_whoosh((TL['intro']['swim'][1] - TL['intro']['swim'][0]) / FPS, 0.55), 0.55),
+    (I + TL['intro']['dive'][0], sfx_whoosh((TL['intro']['dive'][1] - TL['intro']['dive'][0]) / FPS + 0.1, 0.96), 1.0),
+    (I + TL['intro']['morph'][0], sfx_chime((84, 91), 0.06), 0.9),
     (P + pt['selStart'], sfx_marker((pt['selEnd'] - pt['selStart']) / FPS) * 0.4, 0.6),
     (P + pt['flash'], sfx_shutter(), 1.0), (P + pt['flash'] + 2, sfx_whoosh(0.8, 0.5), 0.5),
     (P + pt['rectStart'], sfx_marker((pt['rectEnd'] - pt['rectStart']) / FPS + 0.05), 1.0), (P + pt['c1'], sfx_pop(), 1.0),
@@ -423,7 +425,7 @@ if os.path.exists(meta_path):
         vo[i:j] += clip[: j - i]
     # Clean up the voice: remove rumble, add a little presence, even out the level.
     vo = hp(vo, 90)
-    vo = vo + 0.25 * bp(vo, 2500, 5000) + 0.35 * bp(vo, 90, 220)
+    vo = vo + 0.25 * bp(vo, 2500, 5000)
     speech = np.abs(vo) > 0.01
     vo_rms = np.sqrt(np.mean(vo[speech] ** 2)) if speech.any() else 1.0
     vo *= 10 ** (-15 / 20) / vo_rms
