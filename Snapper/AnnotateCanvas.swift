@@ -147,10 +147,21 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     /// active the whole image is shown so the crop can be adjusted.
     var contentRect: CGRect {
         let full = CGRect(origin: .zero, size: imageSize)
-        guard tool != .crop, let c = cropRect else { return full }
+        guard tool != .crop else { return full }
+        guard let c = cropRect else { return objectsExtent }
         let r = c.integral.intersection(full)
         return (r.isNull || r.width < 2 || r.height < 2) ? full : r
     }
+
+    /// The picture plus anything drawn outside it: the frame grows to hold annotations that go past the edge.
+    private var objectsExtent: CGRect {
+        var all = objects
+        if let w = working { all.append(w) }
+        return AnnotationRenderer.canvasRect(imageSize: imageSize, objects: all)
+    }
+
+    /// Layout is held still while the mouse is down, so the view does not rescale under the pointer mid-drag.
+    private var frozenContent: CGRect?
 
     /// Auto Balance: uniform margins trimmed from the content (relative to `contentRect`).
     private func balanceInsets() -> NSEdgeInsets {
@@ -165,7 +176,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     /// What is shown framed by the background (image space).
     private var shownRect: CGRect {
-        let c = contentRect
+        let c = frozenContent ?? contentRect
         guard showsBackground, background.autoBalance else { return c }
         let i = balanceInsets()
         let r = CGRect(x: c.minX + i.left, y: c.minY + i.top,
@@ -278,17 +289,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         return CGPoint(x: f.minX + p.x * s, y: f.minY + p.y * s)
     }
 
-    /// The canvas is free: annotations can be drawn, moved and resized anywhere. Without a crop or background the
-    /// export grows to include them; with one, whatever lies outside is cut off.
+    /// The canvas is free: annotations can be drawn, moved and resized anywhere. Without a crop the frame (and the
+    /// export, background included) grows to hold them; with a crop, whatever lies outside is cut off.
     private func clampToImage(_ p: CGPoint) -> CGPoint { p }
-
-    /// What the export covers: the picture plus anything drawn outside it.
-    private var canvasRect: CGRect {
-        guard cropRect == nil, tool != .crop, !showsBackground else { return contentRect }
-        var all = objects
-        if let w = working { all.append(w) }
-        return AnnotationRenderer.canvasRect(imageSize: imageSize, objects: all)
-    }
 
     // MARK: - Live zoom / pan snapshot
 
@@ -400,7 +403,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     func exportImage() -> CGImage? {
         commitTextEditing()
-        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect, expand: background.isNone)
+        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect, expand: true)
     }
 
     /// Exactly what the canvas shows: annotations, crop, Auto Balance and background.
@@ -422,6 +425,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     private func balanceInsetsForExport() -> NSEdgeInsets {
         let full = CGRect(origin: .zero, size: imageSize)
         var key = full
+        if cropRect == nil, objectsExtent != full { return NSEdgeInsetsZero }
         if let c = cropRect {
             let r = c.integral.intersection(full)
             if !r.isNull, r.width >= 2, r.height >= 2 { key = r }
@@ -844,6 +848,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         endLive()
         window?.makeFirstResponder(self)
         commitTextEditing()
+        frozenContent = contentRect
         let raw = toImage(convert(event.locationInWindow, from: nil))
         let p = clampToImage(raw)
         dragStart = p
@@ -967,7 +972,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     override func mouseUp(with event: NSEvent) {
         defer {
-            dragStart = nil; movingLast = nil; movingLoupe = false; activeHandle = nil; interacting = false; needsDisplay = true
+            dragStart = nil; movingLast = nil; movingLoupe = false; frozenContent = nil; activeHandle = nil; interacting = false; needsDisplay = true
             if hoverCursor != nil || tool == .select { NSCursor.openHand.set() }
             updateHover(event)
         }
@@ -1453,15 +1458,22 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                 ctx.fillPath()
                 ctx.restoreGState()
             }
+            if visible != CGRect(origin: .zero, size: imageSize) {
+                ctx.saveGState()
+                ctx.addPath(clipPath)
+                ctx.clip()
+                drawChecker(ctx, in: cv)
+                ctx.restoreGState()
+            }
         } else {
-            let canvasView = viewRect(canvasRect)
+            let canvasView = viewRect(contentRect)
             clipPath = CGPath(rect: canvasView, transform: nil)
             ctx.saveGState()
             ctx.setShadow(offset: CGSize(width: 0, height: -2), blur: 10, color: NSColor.black.withAlphaComponent(0.35).cgColor)
             ctx.setFillColor(NSColor.white.cgColor)
             ctx.fill(canvasView)
             ctx.restoreGState()
-            if canvasRect != visible { drawChecker(ctx, in: canvasView) }
+            if contentRect != CGRect(origin: .zero, size: imageSize) { drawChecker(ctx, in: canvasView) }
         }
 
         ctx.saveGState()
