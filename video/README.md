@@ -1,12 +1,13 @@
 # Snapper explainer video
 
-A Remotion project that renders the 48 second explainer on the launch page into `../site/media`.
+A Remotion project that renders the 46 second explainer on the launch page into `../site/media`.
 
 ```
 cd video
 npm install
 npm run voice       # optional: regenerates the narration clips in audio/vo (needs Kokoro, see below)
 npm run audio       # mixes music, effects and narration into public/audio.wav (python3, numpy, scipy)
+                    # NO_VOICE=1 npm run audio writes a music-only mix to public/audio-music.wav
 npm run studio      # preview and edit in the browser
 npm run render      # writes snapper-explainer.mp4, snapper-poster.jpg and app-shot.png
 ```
@@ -38,5 +39,5 @@ The script lives in `src/timeline.json` under `voice`: each line has a cue point
 - `src/Product.tsx` is the editor walkthrough.
 - `src/Scenes.tsx` holds the type-driven scenes.
 - `audio/make_audio.py` builds the music and every sound effect from scratch, timed from `timeline.json`, and ducks the music under the narration.
-- `src/Fish.tsx` is the red snapper. Its eye and gill line are drawn like the app icon, so the intro can dive into the eye and hand over to the icon (`icon-4k.png`, rendered by `design/make_icons.py`) without a cut.
+- `src/Fish.tsx` is a small red snapper that drifts across the desktop wallpaper during the capture. It is an easter egg and is never mentioned.
 - The app in the film ("Orbit") and the people in the chat are invented.

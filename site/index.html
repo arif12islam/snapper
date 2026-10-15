@@ -89,27 +89,23 @@
   .status.err { color: #a3241b; font-weight: 600; }
   .fine { font-size: 14px; color: rgba(27, 27, 77, 0.62); }
 
-  /* The snapper, annotated */
-  .specimen { position: relative; aspect-ratio: 1000 / 620; }
-  .specimen .fish { position: absolute; left: 0; top: 12%; width: 100%; height: auto; overflow: visible; animation: swim-in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-  .specimen .fish .body-bob { animation: bob 5s ease-in-out 1.4s infinite; transform-box: fill-box; }
-  .specimen .fish .tail { transform-origin: 150px 266px; animation: tail 1.2s ease-in-out infinite; }
-  .specimen .notes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .notes path { fill: none; stroke: var(--mark); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.7s 1.5s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
-  .notes path.later { animation-delay: 2.05s; animation-duration: 0.5s; }
-  .notes path.halo { stroke: var(--white); stroke-width: 14; }
-  .specimen .notes path { stroke-width: 7; }
-  .specimen .notes path.halo { stroke-width: 15; }
-  .callout {
-    position: absolute; right: 2%; top: -2%; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px;
-    background: var(--mark); color: var(--white); font-weight: 700; font-size: 16px; box-shadow: 0 8px 18px rgba(255, 59, 48, 0.28);
-    opacity: 0; transform: translateY(8px); animation: callout 0.5s 2.4s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
-  }
-  .num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--white); color: var(--mark); font-weight: 800; font-size: 15px; flex: none; }
-  @keyframes swim-in { from { transform: translateX(-26%) rotate(-3deg); opacity: 0; } }
-  @keyframes bob { 50% { transform: translateY(-10px) rotate(-1deg); } }
-  @keyframes tail { 50% { transform: rotate(7deg); } }
+  .hero .circle path { fill: none; stroke: var(--mark); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.7s 0.5s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
+
+  /* The hero shot, annotated the way Snapper does it */
+  .shot { margin: 0; background: var(--coral); border-radius: 28px; padding: 7%; transform: rotate(1.5deg); box-shadow: 0 40px 80px rgba(27, 27, 77, 0.22); animation: settle 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .shot-inner { position: relative; border-radius: 12px; overflow: hidden; background: var(--white); box-shadow: 0 18px 36px rgba(27, 27, 77, 0.22); }
+  .shot img { display: block; width: 100%; height: auto; aspect-ratio: 11 / 7; }
+  .marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .marks .draw { fill: none; stroke: var(--mark); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.6s 1.0s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
+  .marks .d2 { animation-delay: 1.5s; animation-duration: 0.4s; }
+  .marks .head { fill: var(--mark); opacity: 0; animation: appear 0.15s 1.85s forwards; }
+  .shot .dot { position: absolute; display: grid; place-items: center; width: 7%; aspect-ratio: 1; border-radius: 50%; background: var(--mark); color: #fff; font-weight: 800; font-size: clamp(11px, 1.3vw, 17px); border: 3px solid #fff; box-shadow: 0 4px 10px rgba(27, 27, 77, 0.25); transform: translate(-50%, -50%) scale(0); animation: pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+  .shot .n1 { left: 20.2%; top: 18.3%; animation-delay: 1.55s; }
+  .shot .tag { position: absolute; left: 39%; top: 40.5%; padding: 0.5% 1.6%; border-radius: 8px; background: var(--mark); color: #fff; font-weight: 700; font-size: clamp(11px, 1.35vw, 18px); white-space: nowrap; opacity: 0; transform: translateY(6px); animation: callout 0.4s 2.0s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
+  @keyframes settle { from { transform: rotate(5deg) translateY(30px); opacity: 0; } }
   @keyframes ink { to { stroke-dashoffset: 0; } }
+  @keyframes appear { to { opacity: 1; } }
+  @keyframes pop { to { transform: translate(-50%, -50%) scale(1); } }
   @keyframes callout { to { opacity: 1; transform: none; } }
 
   /* ---------- Film ---------- */
@@ -135,15 +131,6 @@
   .chapters button .num { width: 26px; height: 26px; font-size: 13px; background: var(--ink); color: var(--white); }
   .chapters button.active { background: var(--white); }
   .chapters button.active .num { background: var(--mark); }
-
-  /* ---------- Why a fish ---------- */
-  .why { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 64px; align-items: center; padding: 40px 0 140px; color: var(--white); }
-  .eye-zoom { position: relative; aspect-ratio: 1; max-width: 440px; }
-  .eye-zoom .disc { position: absolute; inset: 0; border-radius: 50%; background: var(--coral); overflow: hidden; }
-  .eye-zoom .disc svg { position: absolute; width: 280%; left: -186%; top: -12%; overflow: visible; }
-  .eye-zoom .icon { position: absolute; right: -6%; bottom: -4%; width: 34%; border-radius: 24%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
-  .why h2 { color: var(--white); }
-  .why p { margin-top: 22px; font-size: 20px; max-width: 28em; color: rgba(255, 255, 255, 0.86); }
 
   /* ---------- Try it ---------- */
   .try { padding: 0 0 140px; color: var(--white); }
@@ -190,20 +177,23 @@
   .seabed p { margin: 20px auto 0; max-width: 30em; font-size: 19px; color: rgba(255, 255, 255, 0.8); }
   .seabed .btn { display: inline-flex; align-items: center; margin-top: 32px; background: var(--coral); color: var(--ink); text-decoration: none; }
   .seabed .btn:hover { background: var(--blush); }
-  footer { color: rgba(255, 255, 255, 0.55); font-size: 14px; }
+  footer { position: relative; overflow: hidden; color: rgba(255, 255, 255, 0.55); font-size: 14px; }
+  .swimmer { position: absolute; left: 0; bottom: 64px; width: 54px; height: auto; animation: swim 46s linear infinite; pointer-events: none; }
+  .swimmer .t { transform-origin: 150px 266px; animation: tail 0.9s ease-in-out infinite; }
+  @keyframes swim { from { transform: translateX(-80px); } to { transform: translateX(calc(100vw + 80px)); } }
+  @keyframes tail { 50% { transform: rotate(8deg); } }
   footer .wrap { display: flex; justify-content: space-between; gap: 16px; padding-top: 24px; padding-bottom: 36px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    .notes path { stroke-dashoffset: 0; }
-    .callout { opacity: 1; transform: none; }
+    .marks .draw, .hero .circle path { stroke-dashoffset: 0; }
+    .marks .head, .shot .tag { opacity: 1; transform: none; }
+    .shot .dot { transform: translate(-50%, -50%); }
   }
   @media (max-width: 980px) {
-    .hero, .why { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr; }
     .hero { padding-bottom: 88px; }
-    .specimen { max-width: 620px; }
-    .why { gap: 40px; }
-    .eye-zoom { max-width: 320px; }
+    .shot { max-width: 640px; }
     .steps ol { grid-template-columns: 1fr 1fr; }
     .try-head { flex-direction: column; align-items: start; }
   }
@@ -219,8 +209,6 @@
     .chapters { grid-template-columns: 1fr 1fr; }
     .steps ol { grid-template-columns: 1fr; }
     .film, .try, .steps, .tools-list { padding-bottom: 96px; }
-    .why { padding-bottom: 96px; }
-    .callout { font-size: 14px; right: 0; }
     footer .wrap { flex-direction: column; }
   }
 </style>
@@ -231,14 +219,13 @@
   <nav>
     <a class="brand" href="/"><img src="/icon-192.png" alt="" width="30" height="30">Snapper</a>
     <a class="link" href="#film">Watch</a>
-    <a class="link" href="#why">The name</a>
     <a class="link" href="#try">Try it</a>
     <a class="pill" href="#request">Request access</a>
   </nav>
 
   <header class="hero" id="request">
     <div>
-      <h1>Screenshots that make the <span class="mark">point.<svg class="notes" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 34 C 300 4, 120 2, 46 26 C -4 46, 6 106, 90 122 C 190 140, 360 128, 392 88 C 410 60, 380 30, 330 18"/></svg></span></h1>
+      <h1>Screenshots that make the <span class="mark">point.<svg class="circle" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 34 C 300 4, 120 2, 46 26 C -4 46, 6 106, 90 122 C 190 140, 360 128, 392 88 C 410 60, 380 30, 330 18"/></svg></span></h1>
       <p class="lead">Snapper is a menu bar app for Mac. Capture any part of your screen, mark it up, record it, and share it as an image or a link.</p>
       <form class="invite-form" novalidate>
         <label class="sr" for="email">Email address</label>
@@ -250,46 +237,25 @@
       <p class="fine">If your email is on the invite list, we send you a download link. Apple Silicon, macOS 14 or later.</p>
     </div>
 
-    <div class="specimen" aria-label="A red snapper, with its eye circled and labelled: our icon, up close">
-      <svg class="fish" viewBox="0 0 1000 520" aria-hidden="true">
-        <defs><clipPath id="fishbody"><path d="M 968 268 C 950 205, 892 150, 800 126 C 650 90, 430 106, 290 156 C 220 182, 168 212, 132 232 L 132 300 C 172 320, 232 352, 302 374 C 470 424, 700 428, 832 384 C 904 358, 952 322, 968 268 Z"/></clipPath></defs>
-        <g class="body-bob">
-          <g class="tail">
-            <path d="M 150 244 C 104 196, 62 136, 18 96 C 40 170, 56 228, 74 266 C 56 304, 40 362, 18 436 C 62 396, 104 336, 150 288 Z" fill="#ff6b5b"/>
-            <path d="M 150 244 C 118 210, 86 166, 54 128 C 70 190, 82 236, 96 266 C 82 296, 70 342, 54 404 C 86 366, 118 322, 150 288 Z" fill="#e8503f"/>
-          </g>
-          <path d="M 742 128 L 716 56 L 684 112 L 656 46 L 624 106 L 596 44 L 562 104 C 506 70, 426 72, 364 110 C 340 124, 320 140, 306 152 Z" fill="#e8503f"/>
-          <path d="M 404 398 C 364 446, 302 466, 250 460 C 280 424, 312 398, 344 386 Z" fill="#e8503f"/>
-          <path d="M 650 408 C 618 456, 566 486, 524 490 C 550 454, 572 424, 598 408 Z" fill="#e8503f"/>
-          <path d="M 968 268 C 950 205, 892 150, 800 126 C 650 90, 430 106, 290 156 C 220 182, 168 212, 132 232 L 132 300 C 172 320, 232 352, 302 374 C 470 424, 700 428, 832 384 C 904 358, 952 322, 968 268 Z" fill="#ff6b5b"/>
-          <g clip-path="url(#fishbody)">
-            <path d="M 980 250 C 880 236, 700 222, 470 228 C 330 232, 220 244, 120 262 L 120 60 L 980 60 Z" fill="#f0584a"/>
-            <path d="M 950 300 C 840 330, 640 352, 430 346 C 320 342, 220 326, 140 300 L 140 470 L 950 470 Z" fill="#ffc2b4"/>
-            <path d="M 700 250 C 560 236, 380 240, 170 262" stroke="#ff8a7c" stroke-width="5" fill="none" stroke-linecap="round"/>
-          </g>
-          <path d="M 712 296 C 652 312, 610 342, 588 378 C 640 372, 690 346, 724 316 Z" fill="#ff8a7c"/>
-          <path d="M 764 150 C 738 214, 734 296, 768 368" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/>
-          <path d="M 968 268 L 922 278" stroke="#1b1b4d" stroke-width="5" stroke-linecap="round"/>
-          <circle cx="842" cy="222" r="56" fill="#1b1b4d"/>
-          <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
-        </g>
-      </svg>
-      <!-- Annotation layer, in the same coordinates as the fish (offset by the fish's 12% top margin) -->
-      <svg class="notes" viewBox="0 0 1000 620" aria-hidden="true">
-        <path class="halo" pathLength="1" d="M 934 300 C 938 236, 884 204, 840 206 C 776 208, 748 256, 752 302 C 756 352, 808 388, 856 384 C 912 378, 940 338, 928 290"/>
-        <path class="halo later" pathLength="1" d="M 912 52 C 936 100, 924 160, 890 204"/>
-        <path pathLength="1" d="M 934 300 C 938 236, 884 204, 840 206 C 776 208, 748 256, 752 302 C 756 352, 808 388, 856 384 C 912 378, 940 338, 928 290"/>
-        <path class="later" pathLength="1" d="M 912 52 C 936 100, 924 160, 890 204"/>
-      </svg>
-      <div class="callout"><span class="num">1</span>Our icon, up close</div>
-    </div>
+    <figure class="shot" aria-label="A screenshot annotated in Snapper: a box around monthly revenue, an arrow to the best month, and a label">
+      <div class="shot-inner">
+        <img src="/media/app-shot.png" alt="" width="1100" height="700">
+        <svg class="marks" viewBox="0 0 1100 700" aria-hidden="true">
+          <rect class="draw" x="222" y="128" width="290" height="126" rx="10" pathLength="1"/>
+          <path class="draw d2" pathLength="1" d="M 690 312 L 846 326"/>
+          <path class="head" d="M 862 328 L 832 342 L 836 312 Z"/>
+        </svg>
+        <span class="dot n1">1</span>
+        <span class="tag">Best month yet</span>
+      </div>
+    </figure>
   </header>
 </div>
 
 <section class="film" id="film">
   <div class="wrap">
     <div class="film-head">
-      <h2>See it in 48 seconds.</h2>
+      <h2>See it in 46 seconds.</h2>
       <div class="controls">
         <button class="ctl" id="sound" type="button" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10"/></svg>
@@ -303,37 +269,18 @@
     </div>
     <div class="screen">
       <video id="film-video" autoplay muted loop playsinline preload="metadata" poster="/media/snapper-poster.jpg"
-             aria-label="Snapper tour: a snapper fish becomes the app icon, then a screenshot is captured, annotated, framed, shared, recorded and trimmed">
+             aria-label="Snapper tour: a screenshot is captured, annotated, framed, shared, recorded and trimmed">
         <source src="/media/snapper-explainer.mp4" type="video/mp4">
         <source src="/media/snapper-explainer.webm" type="video/webm">
         <track kind="captions" src="/media/snapper-explainer.vtt" srclang="en" label="English">
       </video>
     </div>
     <div class="chapters" id="chapters">
-      <button type="button" data-t="16"><span class="num">1</span>Capture</button>
-      <button type="button" data-t="19.3"><span class="num">2</span>Mark it up</button>
-      <button type="button" data-t="27.4"><span class="num">3</span>Frame it</button>
-      <button type="button" data-t="29.9"><span class="num">4</span>Share it</button>
+      <button type="button" data-t="14"><span class="num">1</span>Capture</button>
+      <button type="button" data-t="17.3"><span class="num">2</span>Mark it up</button>
+      <button type="button" data-t="25.4"><span class="num">3</span>Frame it</button>
+      <button type="button" data-t="27.9"><span class="num">4</span>Share it</button>
     </div>
-  </div>
-</section>
-
-<section class="wrap why" id="why">
-  <div class="eye-zoom" aria-hidden="true">
-    <div class="disc">
-      <svg viewBox="0 0 1000 520">
-        <path d="M 2000 250 C 880 236, 700 222, 470 228 C 200 232, -500 240, -1000 250 L -1000 -600 L 2000 -600 Z" fill="#f0584a"/>
-        <path d="M 764 150 C 738 214, 734 296, 768 368" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/>
-        <circle cx="842" cy="222" r="56" fill="#1b1b4d"/>
-        <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
-      </svg>
-    </div>
-    <img class="icon" src="/icon-192.png" alt="" width="192" height="192">
-  </div>
-  <div>
-    <h2>Why a fish?</h2>
-    <p>Snappers are reef fish with large, sharp eyes. Our icon is a close-up of one: the ring is its eye, the white curve is the edge of its gill.</p>
-    <p>A screenshot tool should notice the details too. That is the whole idea.</p>
   </div>
 </section>
 
@@ -401,6 +348,14 @@
 </section>
 
 <footer>
+  <svg class="swimmer" viewBox="0 0 1000 520" aria-hidden="true">
+    <g class="t"><path d="M 150 244 C 104 196, 62 136, 18 96 C 40 170, 56 228, 74 266 C 56 304, 40 362, 18 436 C 62 396, 104 336, 150 288 Z" fill="#ff6b5b"/></g>
+    <path d="M 742 128 L 716 56 L 684 112 L 656 46 L 624 106 L 596 44 L 562 104 C 506 70, 426 72, 364 110 C 340 124, 320 140, 306 152 Z" fill="#e8503f"/>
+    <path d="M 968 268 C 950 205, 892 150, 800 126 C 650 90, 430 106, 290 156 C 220 182, 168 212, 132 232 L 132 300 C 172 320, 232 352, 302 374 C 470 424, 700 428, 832 384 C 904 358, 952 322, 968 268 Z" fill="#ff6b5b"/>
+    <path d="M 764 150 C 738 214, 734 296, 768 368" stroke="#fff" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <circle cx="842" cy="222" r="56" fill="#1b1b4d"/>
+    <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
+  </svg>
   <div class="wrap">
     <span>Snapper by Bykorp</span>
     <span>Apple Silicon, macOS 14 or later</span>
@@ -467,7 +422,7 @@
   chapterButtons.forEach(function (b) { b.addEventListener("click", function () { video.currentTime = parseFloat(b.dataset.t); video.play(); }); });
   video.addEventListener("timeupdate", function () {
     var t = video.currentTime, active = -1;
-    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 31.9) active = i;
+    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 29.9) active = i;
     chapterButtons.forEach(function (b, i) { b.classList.toggle("active", i === active); });
   });
 

@@ -327,9 +327,7 @@ events += [
     (H + hk['circle'][0], sfx_marker((hk['circle'][1] - hk['circle'][0]) / FPS + 0.1), 1.0),
     (H + hk['arrow'][0], sfx_marker((hk['head'][1] - hk['arrow'][0]) / FPS + 0.05), 1.0),
     (H + hk['counter'], sfx_pop(), 1.0),
-    (I + TL['intro']['swim'][0], sfx_whoosh((TL['intro']['swim'][1] - TL['intro']['swim'][0]) / FPS, 0.55), 0.55),
-    (I + TL['intro']['dive'][0], sfx_whoosh((TL['intro']['dive'][1] - TL['intro']['dive'][0]) / FPS + 0.1, 0.96), 1.0),
-    (I + TL['intro']['morph'][0], sfx_chime((84, 91), 0.06), 0.9),
+    (I + TL['intro']['icon'], sfx_chime((84, 91), 0.06), 0.8),
     (P + pt['selStart'], sfx_marker((pt['selEnd'] - pt['selStart']) / FPS) * 0.4, 0.6),
     (P + pt['flash'], sfx_shutter(), 1.0), (P + pt['flash'] + 2, sfx_whoosh(0.8, 0.5), 0.5),
     (P + pt['rectStart'], sfx_marker((pt['rectEnd'] - pt['rectStart']) / FPS + 0.05), 1.0), (P + pt['c1'], sfx_pop(), 1.0),
@@ -409,7 +407,8 @@ import json
 vo = np.zeros(N)
 vo_dir = os.path.join(os.path.dirname(__file__), 'vo')
 meta_path = os.path.join(vo_dir, 'lines.json')
-if os.path.exists(meta_path):
+WITH_VOICE = os.environ.get('NO_VOICE') != '1'
+if WITH_VOICE and os.path.exists(meta_path):
     meta = json.load(open(meta_path))
     for line in meta['lines']:
         sr_in, clip = wavfile.read(os.path.join(vo_dir, f"{line['n']}.wav"))
@@ -428,7 +427,7 @@ if os.path.exists(meta_path):
     vo = vo + 0.25 * bp(vo, 2500, 5000)
     speech = np.abs(vo) > 0.01
     vo_rms = np.sqrt(np.mean(vo[speech] ** 2)) if speech.any() else 1.0
-    vo *= 10 ** (-15 / 20) / vo_rms
+    vo *= 10 ** (-16.5 / 20) / vo_rms
     vo = np.tanh(vo * 1.6) / 1.6  # gentle limiter on peaks
     print(f"voice: {meta['voice']}, {len(meta['lines'])} lines")
 
@@ -440,8 +439,8 @@ env_ = np.convolve(active, np.ones(k) / k, mode='same')
 from scipy.ndimage import maximum_filter1d
 env_ = maximum_filter1d(env_, size=int(0.35 * SR))
 env_ = lp(np.clip(env_ * 3, 0, 1), 6, 1)
-duck_music = 1 - 0.65 * env_
-duck_sfx = 1 - 0.3 * env_
+duck_music = 1 - 0.5 * env_
+duck_sfx = 1 - 0.2 * env_
 
 bed_l = music_l * duck_music + sfx.l * 1.15 * duck_sfx
 bed_r = music_r * duck_music + sfx.r * 1.15 * duck_sfx
@@ -459,7 +458,7 @@ mix *= (fade * fade_in)[:, None]
 peak = np.max(np.abs(mix))
 mix = mix / peak * 10 ** (-1.0 / 20)
 
-out = os.path.join(os.path.dirname(__file__), '..', 'public', 'audio.wav')
+out = os.path.join(os.path.dirname(__file__), '..', 'public', 'audio.wav' if WITH_VOICE else 'audio-music.wav')
 wavfile.write(out, SR, (mix * 32767).astype(np.int16))
 rms = np.sqrt(np.mean(mix ** 2))
 print(f'wrote {out}: {LENGTH}s, peak -1.0 dBFS, rms {20 * np.log10(rms):.1f} dBFS')

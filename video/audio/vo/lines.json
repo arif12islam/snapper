@@ -3,187 +3,52 @@
   "lines": [
     {
       "n": 0,
-      "start": 0.4,
-      "slot": 3.33,
-      "dur": 2.87,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "In a world... where screenshots explain nothing..."
-    },
-    {
-      "n": 1,
-      "start": 4.533,
-      "slot": 2.87,
-      "dur": 1.51,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "one app dares to point."
-    },
-    {
-      "n": 2,
-      "start": 11.667,
-      "slot": 1.2,
+      "start": 8.867,
+      "slot": 1.8,
       "dur": 1.0,
       "speed": 1.0,
       "sr": 24000,
       "text": "Meet Snapper."
     },
     {
+      "n": 1,
+      "start": 15.533,
+      "slot": 1.67,
+      "dur": 1.13,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Capture anything."
+    },
+    {
+      "n": 2,
+      "start": 17.333,
+      "slot": 2.0,
+      "dur": 0.87,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Mark it up."
+    },
+    {
       "n": 3,
-      "start": 13.0,
-      "slot": 2.87,
-      "dur": 2.6,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Named after a fish with an eye for detail."
-    },
-    {
-      "n": 4,
-      "start": 15.933,
-      "slot": 0.97,
-      "dur": 0.96,
-      "speed": 1.06,
-      "sr": 24000,
-      "text": "One shortcut."
-    },
-    {
-      "n": 5,
-      "start": 16.933,
-      "slot": 0.73,
-      "dur": 0.68,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Drag."
-    },
-    {
-      "n": 6,
-      "start": 17.733,
-      "slot": 1.27,
-      "dur": 0.66,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Snap."
-    },
-    {
-      "n": 7,
-      "start": 19.4,
-      "slot": 1.47,
-      "dur": 1.02,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Box the number."
-    },
-    {
-      "n": 8,
-      "start": 20.9,
-      "slot": 2.23,
-      "dur": 1.08,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Point at the peak."
-    },
-    {
-      "n": 9,
-      "start": 23.267,
-      "slot": 1.6,
-      "dur": 1.15,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Hide what's private."
-    },
-    {
-      "n": 10,
-      "start": 24.933,
-      "slot": 2.4,
-      "dur": 1.72,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "And zoom in on what matters."
-    },
-    {
-      "n": 11,
-      "start": 27.433,
-      "slot": 2.4,
+      "start": 25.367,
+      "slot": 1.97,
       "dur": 0.71,
       "speed": 1.0,
       "sr": 24000,
       "text": "Frame it."
     },
     {
-      "n": 12,
-      "start": 29.933,
-      "slot": 2.0,
-      "dur": 1.27,
+      "n": 4,
+      "start": 27.867,
+      "slot": 2.07,
+      "dur": 0.74,
       "speed": 1.0,
       "sr": 24000,
-      "text": "Click. Link copied."
+      "text": "Share it."
     },
     {
-      "n": 13,
-      "start": 33.533,
-      "slot": 1.33,
-      "dur": 1.16,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Paste it anywhere."
-    },
-    {
-      "n": 14,
-      "start": 35.067,
-      "slot": 2.43,
-      "dur": 1.66,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "And watch the questions stop."
-    },
-    {
-      "n": 15,
-      "start": 37.067,
-      "slot": 1.03,
-      "dur": 0.97,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Need motion?"
-    },
-    {
-      "n": 16,
-      "start": 38.1,
-      "slot": 0.7,
-      "dur": 0.69,
-      "speed": 1.06,
-      "sr": 24000,
-      "text": "Record."
-    },
-    {
-      "n": 17,
-      "start": 38.8,
-      "slot": 0.7,
-      "dur": 0.63,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Trim."
-    },
-    {
-      "n": 18,
-      "start": 39.5,
-      "slot": 1.23,
-      "dur": 0.69,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Send."
-    },
-    {
-      "n": 19,
-      "start": 43.667,
-      "slot": 1.07,
-      "dur": 0.75,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Snapper."
-    },
-    {
-      "n": 20,
-      "start": 44.8,
+      "n": 5,
+      "start": 42.8,
       "slot": 2.87,
       "dur": 1.83,
       "speed": 1.0,

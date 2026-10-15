@@ -4,6 +4,7 @@ import { APP_H, APP_W, BEST, FakeApp, barRect, emailCell } from './FakeApp';
 import { Icon } from './Icons';
 import TL from './timeline.json';
 import { C } from './palette';
+import { Fish } from './Fish';
 
 // ---------- Timeline (frames at 30 fps) ----------
 const T = TL.product;
@@ -34,12 +35,18 @@ const MAG = { tx: 409, ty: 199, lx: 660, ly: 104, r: 72, zoom: 2.6 };
 
 // ---------- Backgrounds ----------
 // A flat, colourful desktop: overlapping solid discs, no gradients.
-const Wallpaper: React.FC = () => (
+const Wallpaper: React.FC<{ f: number }> = ({ f }) => (
   <div style={{ position: 'absolute', inset: 0, background: C.sky, overflow: 'hidden' }}>
     <div style={{ position: 'absolute', width: 620, height: 620, borderRadius: '50%', background: C.sun, left: -210, top: -270 }} />
     <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: C.mint, right: 230, top: -130 }} />
     <div style={{ position: 'absolute', width: 540, height: 540, borderRadius: '50%', background: C.lilac, left: 160, bottom: -350 }} />
     <div style={{ position: 'absolute', width: 900, height: 900, borderRadius: '50%', background: C.coral, right: -280, bottom: -440 }} />
+    {/* Easter egg, never mentioned: a small snapper drifting across the top of the desktop. */}
+    <div style={{ position: 'absolute', left: -170 + f * 4.4, top: 52 + Math.sin(f / 10) * 5, width: 150 }}>
+      <div style={{ transform: 'scale(0.15)', transformOrigin: '0 0' }}>
+        <Fish tail={Math.sin(f / 3.5) * 8} fins={Math.sin(f / 5) * 4} />
+      </div>
+    </div>
   </div>
 );
 
@@ -496,7 +503,7 @@ export const ProductScene: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ fontFamily: 'Inter, sans-serif', overflow: 'hidden', background: C.sky }}>
-      <Wallpaper />
+      <Wallpaper f={f} />
       <div style={{ opacity: 1 - fly }}>
         <MenuBar />
       </div>

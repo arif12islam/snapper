@@ -1,7 +1,7 @@
 {
   "fps": 30,
   "bpm": 120,
-  "length": 1440,
+  "length": 1380,
   "scenes": {
     "hook": [
       0,
@@ -9,23 +9,23 @@
     ],
     "intro": [
       240,
-      480
+      420
     ],
     "product": [
-      480,
-      980
+      420,
+      920
     ],
     "chat": [
-      960,
-      1125
+      900,
+      1065
     ],
     "record": [
-      1110,
-      1240
+      1050,
+      1180
     ],
     "outro": [
-      1230,
-      1440
+      1170,
+      1380
     ]
   },
   "hook": {
@@ -59,24 +59,13 @@
     "counter": 186
   },
   "intro": {
-    "swim": [
-      8,
-      62
-    ],
-    "dive": [
-      58,
-      100
-    ],
-    "morph": [
-      100,
-      140
-    ],
-    "title": 126,
-    "sub": 140,
-    "chips": 150,
+    "icon": 14,
+    "title": 26,
+    "sub": 42,
+    "chips": 34,
     "exit": [
-      222,
-      238
+      160,
+      176
     ]
   },
   "product": {
@@ -146,167 +135,47 @@
   "voice": [
     {
       "at": [
-        0,
-        12
-      ],
-      "until": 112,
-      "text": "In a world... where screenshots explain nothing..."
-    },
-    {
-      "at": [
-        0,
-        136
-      ],
-      "until": 222,
-      "text": "one app dares to point."
-    },
-    {
-      "at": [
         240,
-        110
+        26
       ],
-      "until": 146,
+      "until": 80,
       "text": "Meet Snapper."
     },
     {
       "at": [
-        240,
-        150
+        420,
+        46
       ],
-      "until": 236,
-      "text": "Named after a fish with an eye for detail."
+      "until": 96,
+      "text": "Capture anything."
     },
     {
       "at": [
-        480,
-        -2
+        420,
+        100
       ],
-      "until": 27,
-      "text": "One shortcut."
+      "until": 160,
+      "text": "Mark it up."
     },
     {
       "at": [
-        480,
-        28
+        420,
+        341
       ],
-      "until": 50,
-      "text": "Drag."
-    },
-    {
-      "at": [
-        480,
-        52
-      ],
-      "until": 90,
-      "text": "Snap."
-    },
-    {
-      "at": [
-        480,
-        102
-      ],
-      "until": 146,
-      "text": "Box the number."
-    },
-    {
-      "at": [
-        480,
-        147
-      ],
-      "until": 214,
-      "text": "Point at the peak."
-    },
-    {
-      "at": [
-        480,
-        218
-      ],
-      "until": 266,
-      "text": "Hide what's private."
-    },
-    {
-      "at": [
-        480,
-        268
-      ],
-      "until": 340,
-      "text": "And zoom in on what matters."
-    },
-    {
-      "at": [
-        480,
-        343
-      ],
-      "until": 415,
+      "until": 400,
       "text": "Frame it."
     },
     {
       "at": [
-        480,
-        418
+        420,
+        416
       ],
       "until": 478,
-      "text": "Click. Link copied."
+      "text": "Share it."
     },
     {
       "at": [
-        960,
-        46
-      ],
-      "until": 86,
-      "text": "Paste it anywhere."
-    },
-    {
-      "at": [
-        960,
-        92
-      ],
-      "until": 165,
-      "text": "And watch the questions stop."
-    },
-    {
-      "at": [
-        1110,
-        2
-      ],
-      "until": 33,
-      "text": "Need motion?"
-    },
-    {
-      "at": [
-        1110,
-        33
-      ],
-      "until": 54,
-      "text": "Record."
-    },
-    {
-      "at": [
-        1110,
-        54
-      ],
-      "until": 75,
-      "text": "Trim."
-    },
-    {
-      "at": [
-        1110,
-        75
-      ],
-      "until": 112,
-      "text": "Send."
-    },
-    {
-      "at": [
-        1230,
-        80
-      ],
-      "until": 112,
-      "text": "Snapper."
-    },
-    {
-      "at": [
-        1230,
+        1170,
         114
       ],
       "until": 200,
