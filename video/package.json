@@ -1,8 +1,9 @@
 {
-  "name": "snapper-promo",
+  "name": "snapper-explainer",
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "audio": "python3 audio/make_audio.py",
     "studio": "remotion studio src/index.ts",
     "render": "node render.mjs"
   },

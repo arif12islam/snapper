@@ -5,18 +5,18 @@ import { Icon } from './Icons';
 
 // ---------- Timeline (frames at 30 fps) ----------
 const T = {
-  selStart: 14, selEnd: 52, flash: 54, flyStart: 58, flyEnd: 88,
-  rectStart: 100, rectEnd: 122, c1: 126,
-  arrowStart: 140, arrowEnd: 160,
-  textStart: 168, textEnd: 198, c2: 204,
-  blurStart: 214, blurEnd: 234,
-  magStart: 248, magEnd: 282,
-  bgClick: 306, bgEnd: 346,
-  copyClick: 366, toastIn: 370, toastOut: 428,
-  outStart: 432, outEnd: 458,
-  endIn: 448,
+  selStart: 8, selEnd: 38, flash: 45, flyStart: 45, flyEnd: 75,
+  rectStart: 90, rectEnd: 105, c1: 105,
+  arrowStart: 120, arrowEnd: 135,
+  textStart: 139, textEnd: 160, c2: 165,
+  blurStart: 180, blurEnd: 195,
+  magStart: 210, magEnd: 240,
+  bgClick: 255, cyc1: 270, cyc2: 285, cyc3: 300,
+  copyClick: 330, toastIn: 333, toastOut: 385,
+  outStart: 380, outEnd: 400,
 };
-export const DURATION = 540;
+export const PRODUCT_T = T;
+export const PRODUCT_LEN = 400;
 
 // ---------- Layout ----------
 const EX = 50, EY = 40, EW = 1500, EH = 920;
@@ -52,7 +52,7 @@ const Wallpaper: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
 );
 
 const NAVY = '#1b1b4d';
-const FRAME_BG = NAVY;
+const frameColor = (f: number) => (f >= T.cyc3 ? NAVY : f >= T.cyc2 ? PAPER : f >= T.cyc1 ? RED : NAVY);
 
 // ---------- Cursor ----------
 type Key = [number, number, number];
@@ -88,7 +88,7 @@ const pointerKeys: Key[] = [
   [T.magStart, ...toScreen(MAG.tx, MAG.ty)],
   [T.magEnd, ...toScreen(MAG.lx, MAG.ly)],
   [T.bgClick - 2, ...BG_BTN],
-  [T.bgClick + 16, BG_BTN[0] - 20, BG_BTN[1] + 50],
+  [T.cyc3 + 2, ...BG_BTN],
   [T.copyClick - 2, ...COPY_BTN],
   [T.outStart, COPY_BTN[0] + 30, COPY_BTN[1] + 120],
 ];
@@ -178,7 +178,7 @@ const activeTool = (f: number): ToolName => {
 
 const Toolbar: React.FC<{ f: number }> = ({ f }) => {
   const active = activeTool(f);
-  const bgPress = clickPulse(f, T.bgClick);
+  const bgPress = Math.max(clickPulse(f, T.bgClick), clickPulse(f, T.cyc1), clickPulse(f, T.cyc2), clickPulse(f, T.cyc3));
   const copyPress = clickPulse(f, T.copyClick);
   const btn = (x: number, w: number, press: number, children: React.ReactNode) => (
     <div
@@ -220,7 +220,7 @@ const Toolbar: React.FC<{ f: number }> = ({ f }) => {
       </div>
       {btn(1188, 150, bgPress, (
         <>
-          <div style={{ width: 26, height: 18, borderRadius: 5, background: FRAME_BG }} />
+          <div style={{ width: 26, height: 18, borderRadius: 5, background: frameColor(f), border: '1px solid rgba(0,0,0,0.15)' }} />
           Background
         </>
       ))}
@@ -392,46 +392,39 @@ const Annotations: React.FC<{ f: number; fps: number }> = ({ f, fps }) => {
   );
 };
 
-// ---------- End card ----------
-const EndCard: React.FC<{ f: number; fps: number }> = ({ f, fps }) => {
-  const d = f - T.endIn;
-  const icon = spring({ frame: d, fps, config: { damping: 13, stiffness: 140 } });
-  const title = spring({ frame: d - 8, fps, config: { damping: 18, stiffness: 160 } });
-  const words = ['Capture.', 'Annotate.', 'Record.', 'Share.'];
-  const pill = spring({ frame: d - 40, fps, config: { damping: 18, stiffness: 160 } });
+// ---------- Chapter tag ----------
+const ChapterTag: React.FC<{ f: number; fps: number; n: number; label: string; start: number; end: number }> = ({ f, fps, n, label, start, end }) => {
+  if (f < start || f > end + 12) return null;
+  const inn = spring({ frame: f - start, fps, config: { damping: 16, stiffness: 170 } });
+  const outT = ramp(f, end, end + 10);
   return (
-    <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column', background: PAPER, opacity: interpolate(d, [0, 10], [0, 1], clamp) }}>
-      <Img
-        src={staticFile('icon.png')}
-        style={{ width: 190, height: 190, transform: `scale(${icon}) rotate(${(1 - icon) * -12}deg)`, filter: 'drop-shadow(0 10px 18px rgba(27,27,77,0.18))' }}
-      />
-      <div style={{ marginTop: 26, fontSize: 112, fontWeight: 800, color: NAVY, letterSpacing: -4, opacity: title, transform: `translateY(${(1 - title) * 30}px)` }}>
-        Snapper
+    <div
+      style={{
+        position: 'absolute', left: 74, top: 884, height: 54, display: 'flex', alignItems: 'center', gap: 12, padding: '0 22px 0 8px',
+        borderRadius: 27, background: '#fff', color: NAVY, fontSize: 22, fontWeight: 700, letterSpacing: -0.3,
+        boxShadow: '0 10px 24px rgba(0,0,0,0.22)', opacity: inn * (1 - outT), transform: `translateX(${(1 - inn) * -40 - outT * 30}px)`,
+      }}
+    >
+      <div style={{ width: 38, height: 38, borderRadius: 19, background: RED, color: '#fff', fontSize: 19, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {n}
       </div>
-      <div style={{ display: 'flex', gap: 18, marginTop: 6 }}>
-        {words.map((w, i) => {
-          const s = spring({ frame: d - 18 - i * 5, fps, config: { damping: 18, stiffness: 170 } });
-          return (
-            <div key={w} style={{ fontSize: 38, fontWeight: 600, color: '#55586f', opacity: s, transform: `translateY(${(1 - s) * 24}px)` }}>
-              {w}
-            </div>
-          );
-        })}
-      </div>
-      <div
-        style={{
-          marginTop: 38, padding: '10px 22px', borderRadius: 999, border: '1px solid rgba(27,27,77,0.22)',
-          color: NAVY, fontSize: 20, fontWeight: 600, letterSpacing: 0.3, opacity: pill, transform: `scale(${0.9 + 0.1 * pill})`,
-        }}
-      >
-        Invite only. For macOS 14 and later
-      </div>
-    </AbsoluteFill>
+      {label}
+    </div>
   );
 };
 
+// The finished, annotated shot, used as a thumbnail later in the film.
+export const FinalShot: React.FC = () => (
+  <div style={{ position: 'relative', width: APP_W, height: APP_H, fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      <FakeApp blurRow={1} blurAmount={7} />
+    </div>
+    <Annotations f={9999} fps={30} />
+  </div>
+);
+
 // ---------- Composition ----------
-export const Promo: React.FC = () => {
+export const ProductScene: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -456,7 +449,7 @@ export const Promo: React.FC = () => {
   const [px, py] = path(f, pointerKeys);
   const press = Math.max(
     clickPulse(f, T.rectStart), clickPulse(f, T.arrowStart), clickPulse(f, T.c1), clickPulse(f, T.textStart),
-    clickPulse(f, T.c2), clickPulse(f, T.blurStart), clickPulse(f, T.magStart), clickPulse(f, T.bgClick), clickPulse(f, T.copyClick),
+    clickPulse(f, T.c2), clickPulse(f, T.blurStart), clickPulse(f, T.magStart), clickPulse(f, T.bgClick), clickPulse(f, T.cyc1), clickPulse(f, T.cyc2), clickPulse(f, T.cyc3), clickPulse(f, T.copyClick),
   );
 
   const toast = spring({ frame: f - T.toastIn, fps, config: { damping: 16, stiffness: 180 } }) - ramp(f, T.toastOut, T.toastOut + 8);
@@ -473,7 +466,7 @@ export const Promo: React.FC = () => {
       </div>
       <AbsoluteFill style={{ background: 'rgba(8,8,24,0.45)', opacity: fly * (1 - out) }} />
 
-      {f < T.endIn + 30 ? (
+      {f < PRODUCT_LEN + 1 ? (
         <AbsoluteFill style={{ transform: `scale(${sceneScale})`, opacity: f < T.flyStart ? 1 : 1 - out, filter: out > 0 ? `blur(${out * 10}px)` : undefined }}>
           {/* Editor window */}
           <div
@@ -493,7 +486,7 @@ export const Promo: React.FC = () => {
             <div
               style={{
                 position: 'absolute', left: imgL - pad, top: imgT - pad, width: APP_W * s + pad * 2, height: APP_H * s + pad * 2,
-                background: FRAME_BG, opacity: Math.min(1, bg * 1.5),
+                background: frameColor(f), opacity: Math.min(1, bg * 1.5),
               }}
             />
           ) : null}
@@ -556,10 +549,12 @@ export const Promo: React.FC = () => {
       ) : null}
 
       <AbsoluteFill style={{ background: '#fff', opacity: flash }} />
-      {f >= T.endIn ? <EndCard f={f} fps={fps} /> : null}
-      {/* Fade from and to the same navy so the loop is seamless */}
+      <ChapterTag f={f} fps={fps} n={1} label="Capture any area" start={4} end={78} />
+      <ChapterTag f={f} fps={fps} n={2} label="Mark it up" start={84} end={248} />
+      <ChapterTag f={f} fps={fps} n={3} label="Frame it" start={254} end={322} />
+      <ChapterTag f={f} fps={fps} n={4} label="Share a link" start={328} end={384} />
+      {/* Fade in from the navy intro */}
       <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [0, 10], [1, 0], clamp) }} />
-      <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [DURATION - 14, DURATION - 1], [0, 1], clamp) }} />
     </AbsoluteFill>
   );
 };
