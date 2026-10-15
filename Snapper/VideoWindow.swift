@@ -92,7 +92,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
             itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
                 guard item.status == .failed else { return }
                 let message = item.error?.localizedDescription ?? "unknown error"
-                Task { @MainActor in self?.setStatus("This file can't be played: \(message)") }
+                Task { @MainActor [weak self] in self?.setStatus("This file can't be played: \(message)") }
             }
         }
 
@@ -237,7 +237,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
 
     private func scheduleRebuild() {
         rebuildWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in Task { @MainActor in await self?.rebuild() } }
+        let work = DispatchWorkItem { [weak self] in Task { @MainActor [weak self] in await self?.rebuild() } }
         rebuildWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
     }
@@ -332,7 +332,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         exportBox = box
         exportTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
             let p = Double(box.session.progress)
-            Task { @MainActor in self?.progress.doubleValue = p }
+            Task { @MainActor [weak self] in self?.progress.doubleValue = p }
         }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             box.session.exportAsynchronously { continuation.resume() }

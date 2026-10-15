@@ -517,7 +517,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     @objc private func pickColorAction() {
         NSColorSampler().show { [weak self] color in
             guard let color else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.colorWell.color = color
                 self.styleChanged()

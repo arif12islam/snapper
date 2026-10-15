@@ -110,7 +110,7 @@ final class RecordingControls: NSObject {
         panel.orderFrontRegardless()
         lastTick = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+            Task { @MainActor [weak self] in self?.tick() }
         }
         timer?.tolerance = 0.1
     }
@@ -208,7 +208,7 @@ final class InputOverlays: NSObject {
         if showClicks {
             mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 let p = NSEvent.mouseLocation
-                Task { @MainActor in self?.ripple(at: p) }
+                Task { @MainActor [weak self] in self?.ripple(at: p) }
             }
         }
         if showKeys {
@@ -216,7 +216,7 @@ final class InputOverlays: NSObject {
             let only = onlyShortcuts
             keyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let text = Self.describe(event, onlyShortcuts: only) else { return }
-                Task { @MainActor in self?.show(keys: text) }
+                Task { @MainActor [weak self] in self?.show(keys: text) }
             }
         }
     }
@@ -311,7 +311,7 @@ final class InputOverlays: NSObject {
         keyPanel?.orderFrontRegardless()
         hideWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.typed = ""
                 self?.keyPanel?.orderOut(nil)
             }

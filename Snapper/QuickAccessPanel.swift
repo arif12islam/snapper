@@ -459,7 +459,7 @@ final class QuickAccessPanel: NSObject {
         cancelAutoClose()
         guard AppSettings.autoClosePanel, !hovering, !Self.overlaysHidden else { return }
         let work = DispatchWorkItem { [weak self] in
-            Task { @MainActor in self?.close(remember: true) }
+            Task { @MainActor [weak self] in self?.close(remember: true) }
         }
         autoCloseWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + AppSettings.autoCloseSeconds, execute: work)
@@ -513,7 +513,7 @@ final class QuickAccessPanel: NSObject {
         guard AppSettings.closeAfterDrag, dragMonitor == nil else { return }
         // Close once the drop has happened (the mouse button comes up somewhere else).
         dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 if let m = self.dragMonitor { NSEvent.removeMonitor(m); self.dragMonitor = nil }
                 try? await Task.sleep(nanoseconds: 400_000_000)

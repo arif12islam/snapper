@@ -96,12 +96,12 @@ final class CursorRecorder {
     func begin() {
         start = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.sample() }
+            Task { @MainActor [weak self] in self?.sample() }
         }
         timer?.tolerance = 0.03
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             let p = NSEvent.mouseLocation
-            Task { @MainActor in self?.click(at: p) }
+            Task { @MainActor [weak self] in self?.click(at: p) }
         }
     }
 

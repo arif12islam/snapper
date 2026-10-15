@@ -40,7 +40,7 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
             forName: NSApplication.didBecomeActiveNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor [weak self] in self?.refresh() }
         }
         refresh()
     }
