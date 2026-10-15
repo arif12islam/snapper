@@ -33,7 +33,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     private let window: NSWindow
     private let canvas: AnnotateCanvas
-    private var toolSegments: [NSSegmentedControl] = []
+    private var toolSegments: [ToolGroup] = []
     private var styleGroups: [StyleControl: NSView] = [:]
 
     private let colorWell = NSColorWell(style: .minimal)
@@ -321,14 +321,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             let images = tools.map {
                 NSImage(systemSymbolName: $0.symbol, accessibilityDescription: $0.title) ?? NSImage()
             }
-            let seg = DividedSegmentedControl(images: images, trackingMode: .selectOne,
-                                         target: self, action: #selector(toolSegmentPicked(_:)))
-            seg.tag = groupIndex
-            seg.segmentStyle = .separated
-            for (i, tool) in tools.enumerated() {
-                seg.setToolTip("\(tool.title)  \(tool.key.uppercased())", forSegment: i)
-                seg.setWidth(30, forSegment: i)
-            }
+            let seg = ToolGroup(images: images, tips: tools.map { "\($0.title)  \($0.key.uppercased())" })
+            seg.onPick = { [weak self] i in self?.pickTool(group: groupIndex, index: i) }
             toolSegments.append(seg)
         }
 
@@ -719,12 +713,11 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     // MARK: - Actions
 
-    @objc private func toolSegmentPicked(_ sender: NSSegmentedControl) {
-        guard sender.tag >= 0, sender.tag < Self.toolLayout.count else { return }
-        let tools = Self.toolLayout[sender.tag]
-        let i = sender.selectedSegment
-        guard i >= 0, i < tools.count else { return }
-        canvas.tool = tools[i]
+    private func pickTool(group: Int, index: Int) {
+        guard group >= 0, group < Self.toolLayout.count else { return }
+        let tools = Self.toolLayout[group]
+        guard index >= 0, index < tools.count else { return }
+        canvas.tool = tools[index]
         window.makeFirstResponder(canvas)
     }
 
@@ -1044,32 +1037,45 @@ final class AnnotateNSWindow: NSWindow {
 }
 
 
-/// Segmented control whose dividers stay visible while the pointer is over it (the system hides them on hover).
-final class DividedSegmentedControl: NSSegmentedControl {
-    private final class Line: NSView {
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
-        override func draw(_ dirtyRect: NSRect) {
-            NSColor.tertiaryLabelColor.setFill()
-            bounds.fill()
+/// A row of icon buttons for one group of tools: no dividers, the active tool gets a soft highlight.
+final class ToolGroup: NSStackView {
+    var onPick: ((Int) -> Void)?
+    private var buttons: [NSButton] = []
+
+    var selectedSegment: Int = -1 {
+        didSet {
+            for (i, b) in buttons.enumerated() {
+                b.layer?.backgroundColor = i == selectedSegment
+                    ? NSColor.labelColor.withAlphaComponent(0.12).cgColor : NSColor.clear.cgColor
+            }
         }
     }
 
-    private var lines: [Line] = []
-
-    override func layout() {
-        super.layout()
-        let n = segmentCount
-        while lines.count < max(n - 1, 0) {
-            let v = Line()
-            addSubview(v)
-            lines.append(v)
-        }
-        var total: CGFloat = 0
-        for i in 0..<n { total += width(forSegment: i) }
-        var x = (bounds.width - total) / 2
-        for (i, v) in lines.enumerated() {
-            x += width(forSegment: i)
-            v.frame = NSRect(x: x - 0.5, y: (bounds.height - 16) / 2, width: 1, height: 16)
+    init(images: [NSImage], tips: [String]) {
+        super.init(frame: .zero)
+        orientation = .horizontal
+        spacing = 2
+        edgeInsets = NSEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)
+        for (i, image) in images.enumerated() {
+            let b = NSButton()
+            b.image = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)) ?? image
+            b.isBordered = false
+            b.imagePosition = .imageOnly
+            b.toolTip = tips[i]
+            b.tag = i
+            b.target = self
+            b.action = #selector(tapped(_:))
+            b.wantsLayer = true
+            b.layer?.cornerRadius = 7
+            b.translatesAutoresizingMaskIntoConstraints = false
+            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
+            buttons.append(b)
+            addArrangedSubview(b)
         }
     }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    @objc private func tapped(_ sender: NSButton) { onPick?(sender.tag) }
 }
