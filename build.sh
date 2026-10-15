@@ -5,8 +5,9 @@
 # Usage:  ./build.sh            build, update /Applications/Snapper.app in place and relaunch
 #         ./build.sh --no-run   build only
 #         ./build.sh --zip      build/Snapper-<version>.zip
-#         ./build.sh --release  both the .dmg (what in-app updates download) and the .zip
+#         ./build.sh --release  the .dmg (what in-app updates download), the .zip and the .pkg
 #         ./build.sh --dmg      build the drag-to-Applications installer, build/Snapper-<version>.dmg
+#         ./build.sh --pkg      build the standard macOS installer, build/Snapper-<version>.pkg
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -78,8 +79,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Snapper</string>
   <key>CFBundleIdentifier</key><string>com.example.snapper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.6</string>
-  <key>CFBundleVersion</key><string>7</string>
+  <key>CFBundleShortVersionString</key><string>1.7</string>
+  <key>CFBundleVersion</key><string>8</string>
   <key>NSHumanReadableCopyright</key><string>Snapper. Built by Bykorp.</string>
 ${ICON_KEY}
   <key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -132,6 +133,15 @@ if [ "$MODE" = "--zip" ] || [ "$MODE" = "--release" ]; then
   ditto -c -k --keepParent "$APP" "$ZIP"
   echo "==> Built $ZIP"
   [ "$MODE" = "--zip" ] && exit 0
+fi
+
+if [ "$MODE" = "--pkg" ] || [ "$MODE" = "--release" ]; then
+  VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+  PKG="build/Snapper-${VERSION}.pkg"
+  rm -f "$PKG"
+  pkgbuild --component "$APP" --install-location /Applications "$PKG" >/dev/null
+  echo "==> Built $PKG"
+  [ "$MODE" = "--pkg" ] && exit 0
 fi
 
 if [ "$MODE" = "--dmg" ] || [ "$MODE" = "--release" ]; then

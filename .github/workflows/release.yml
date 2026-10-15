@@ -49,6 +49,6 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "Release $VERSION already exists; raise the version in build.sh to publish a new one."
           else
-            gh release create "$VERSION" "build/Snapper-$VERSION.dmg" "build/Snapper-$VERSION.zip" \
+            gh release create "$VERSION" "build/Snapper-$VERSION.dmg" "build/Snapper-$VERSION.zip" "build/Snapper-$VERSION.pkg" \
               --title "Snapper $VERSION" --notes "Snapper $VERSION"
           fi
