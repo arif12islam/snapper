@@ -116,6 +116,8 @@
   .ctl:hover { border-color: #fff; }
   .ctl.hot { background: var(--red); border-color: var(--red); }
   .ctl svg { width: 18px; height: 18px; }
+  #cc { min-width: 56px; justify-content: center; letter-spacing: 0.04em; }
+  .screen video::cue { background: rgba(17, 17, 37, 0.85); color: #fff; font-family: Inter, sans-serif; font-weight: 600; font-size: 0.9em; }
   .screen { position: relative; border-radius: 16px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.14); background: #13133a; }
   .screen video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
   .chapters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 18px; }
@@ -263,6 +265,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="wave" d="M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10"/></svg>
           <span>Sound on</span>
         </button>
+        <button class="ctl" id="cc" type="button" aria-pressed="false" aria-label="Captions">CC</button>
         <button class="ctl" id="playpause" type="button" aria-label="Pause">
           <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
         </button>
@@ -273,6 +276,7 @@
              aria-label="Snapper tour: capture an area, annotate it, frame it, share a link, record and trim">
         <source src="/media/snapper-explainer.mp4" type="video/mp4">
         <source src="/media/snapper-explainer.webm" type="video/webm">
+        <track kind="captions" src="/media/snapper-explainer.vtt" srclang="en" label="English">
       </video>
     </div>
     <div class="chapters" id="chapters">
@@ -419,6 +423,16 @@
     sound.setAttribute("aria-pressed", String(turningOn));
     sound.querySelector("span").textContent = turningOn ? "Sound off" : "Sound on";
   });
+
+  var cc = document.getElementById("cc");
+  function captions(on) {
+    var track = video.textTracks && video.textTracks[0];
+    if (track) track.mode = on ? "showing" : "hidden";
+    cc.classList.toggle("hot", on);
+    cc.setAttribute("aria-pressed", String(on));
+  }
+  cc.addEventListener("click", function () { captions(cc.getAttribute("aria-pressed") !== "true"); });
+  captions(false);
 
   var chapterButtons = Array.prototype.slice.call(document.querySelectorAll("#chapters button"));
   var marks = chapterButtons.map(function (b) { return parseFloat(b.dataset.t); });

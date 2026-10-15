@@ -5,7 +5,8 @@ A Remotion project that renders the 32 second explainer on the launch page into 
 ```
 cd video
 npm install
-npm run audio       # synthesizes public/audio.wav (needs python3 with numpy and scipy)
+npm run voice       # optional: regenerates the narration clips in audio/vo (needs Kokoro, see below)
+npm run audio       # mixes music, effects and narration into public/audio.wav (python3, numpy, scipy)
 npm run studio      # preview and edit in the browser
 npm run render      # writes snapper-explainer.mp4, snapper-poster.jpg and app-shot.png
 ```
@@ -17,6 +18,18 @@ ffmpeg -y -i ../site/media/snapper-explainer.mp4 -c:v libvpx-vp9 -b:v 0 -crf 37 
 ```
 
 On Linux without Chrome, point Remotion at a Chromium build with `REMOTION_BROWSER=/path/to/headless_shell`.
+
+## Narration
+
+The voice is Kokoro (open weights, Apache 2.0), voice `af_heart`, run locally. The clips are committed in `audio/vo`, so you only need Kokoro to change the script:
+
+```
+pip install kokoro-onnx soundfile
+# download kokoro-v1.0.onnx and voices-v1.0.bin from github.com/thewh1teagle/kokoro-onnx/releases into ~/tts
+KOKORO_DIR=~/tts python3 audio/voiceover.py af_heart
+```
+
+The script, with a start time and a latest end time for each line, is at the top of `audio/voiceover.py`. Lines that run long are sped up slightly to fit; the run prints each line's length and speed. It also writes the captions file `site/media/snapper-explainer.vtt`.
 
 ## How it fits together
 

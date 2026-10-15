@@ -385,23 +385,69 @@ def reverb(l, r, seconds=1.6):
 keys_rl, keys_rr = reverb(keys.l + verb_send.l + pad.l * 0.3, keys.r + verb_send.r + pad.r * 0.3)
 
 MUSIC = 0.68  # music bed sits under the sound effects
-L = MUSIC * (drums.l * 0.9 + bass.l * sc * 0.9 + (keys.l + pad.l) * (0.6 + 0.4 * sc) + keys_rl) + sfx.l * 1.15
-R = MUSIC * (drums.r * 0.9 + bass.r * sc * 0.9 + (keys.r + pad.r) * (0.6 + 0.4 * sc) + keys_rr) + sfx.r * 1.15
+music_l = MUSIC * (drums.l * 0.9 + bass.l * sc * 0.9 + (keys.l + pad.l) * (0.6 + 0.4 * sc) + keys_rl)
+music_r = MUSIC * (drums.r * 0.9 + bass.r * sc * 0.9 + (keys.r + pad.r) * (0.6 + 0.4 * sc) + keys_rr)
 
-# Hook opens filtered and widens out by the drop at 4 s.
 t = np.arange(N) / SR
-open_mix = np.clip((t - 0.0) / 4.0, 0, 1)
-L = L * (0.55 + 0.45 * open_mix)
-R = R * (0.55 + 0.45 * open_mix)
+# Hook opens filtered and widens out by the drop at 4 s.
+open_mix = 0.55 + 0.45 * np.clip(t / 4.0, 0, 1)
+music_l *= open_mix
+music_r *= open_mix
 
-# Fade the last half second so the loop is clean.
-fade = np.clip((LENGTH - t) / 0.6, 0, 1)
+# ------------------------------------------------------------------ voiceover
+from scipy.signal import resample_poly
+import json
+
+vo = np.zeros(N)
+vo_dir = os.path.join(os.path.dirname(__file__), 'vo')
+meta_path = os.path.join(vo_dir, 'lines.json')
+if os.path.exists(meta_path):
+    meta = json.load(open(meta_path))
+    for line in meta['lines']:
+        sr_in, clip = wavfile.read(os.path.join(vo_dir, f"{line['n']}.wav"))
+        clip = clip.astype(float)
+        if clip.dtype.kind == 'i' or np.abs(clip).max() > 2:
+            clip /= 32768.0
+        if clip.ndim > 1:
+            clip = clip.mean(axis=1)
+        g = np.gcd(SR, sr_in)
+        clip = resample_poly(clip, SR // g, sr_in // g)
+        i = int(line['start'] * SR)
+        j = min(N, i + len(clip))
+        vo[i:j] += clip[: j - i]
+    # Clean up the voice: remove rumble, add a little presence, even out the level.
+    vo = hp(vo, 90)
+    vo = vo + 0.25 * bp(vo, 2500, 5000)
+    speech = np.abs(vo) > 0.01
+    vo_rms = np.sqrt(np.mean(vo[speech] ** 2)) if speech.any() else 1.0
+    vo *= 10 ** (-15 / 20) / vo_rms
+    vo = np.tanh(vo * 1.6) / 1.6  # gentle limiter on peaks
+    print(f"voice: {meta['voice']}, {len(meta['lines'])} lines")
+
+# Duck the music (about 9 dB) and effects (about 3 dB) while the narrator talks.
+active = (np.abs(vo) > 0.004).astype(float)
+k = int(0.12 * SR)
+env_ = np.convolve(active, np.ones(k) / k, mode='same')
+# Hold the duck through short pauses between words.
+from scipy.ndimage import maximum_filter1d
+env_ = maximum_filter1d(env_, size=int(0.35 * SR))
+env_ = lp(np.clip(env_ * 3, 0, 1), 6, 1)
+duck_music = 1 - 0.65 * env_
+duck_sfx = 1 - 0.3 * env_
+
+bed_l = music_l * duck_music + sfx.l * 1.15 * duck_sfx
+bed_r = music_r * duck_music + sfx.r * 1.15 * duck_sfx
+bed = np.stack([bed_l, bed_r], axis=1)
+bed = np.tanh(bed * 0.9) / np.tanh(0.9)
+bed *= 10 ** (-3.0 / 20) / max(1e-9, np.max(np.abs(bed)))
+
+mix = bed + np.stack([vo, vo], axis=1)
+
+# Fade the very end so the loop is clean, after the last line has finished.
+fade = np.clip((LENGTH - t) / 0.25, 0, 1)
 fade_in = np.clip(t / 0.02, 0, 1)
-L *= fade * fade_in
-R *= fade * fade_in
+mix *= (fade * fade_in)[:, None]
 
-mix = np.stack([L, R], axis=1)
-mix = np.tanh(mix * 0.9) / np.tanh(0.9)
 peak = np.max(np.abs(mix))
 mix = mix / peak * 10 ** (-1.0 / 20)
 

@@ -1,0 +1,86 @@
+{
+  "voice": "af_heart",
+  "lines": [
+    {
+      "n": 0,
+      "start": 0.35,
+      "slot": 3.6,
+      "dur": 2.16,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "A screenshot rarely explains itself."
+    },
+    {
+      "n": 1,
+      "start": 4.25,
+      "slot": 3.6,
+      "dur": 3.51,
+      "speed": 1.07,
+      "sr": 24000,
+      "text": "Meet Snapper. Capture, annotate and share from your menu bar."
+    },
+    {
+      "n": 2,
+      "start": 8.15,
+      "slot": 2.6,
+      "dur": 2.59,
+      "speed": 1.08,
+      "sr": 24000,
+      "text": "Press a shortcut and grab any part of your screen."
+    },
+    {
+      "n": 3,
+      "start": 11.0,
+      "slot": 5.4,
+      "dur": 4.45,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Then mark it up. Boxes, arrows, numbered steps, a magnifier, and blur."
+    },
+    {
+      "n": 4,
+      "start": 16.6,
+      "slot": 2.25,
+      "dur": 1.05,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Give it a background."
+    },
+    {
+      "n": 5,
+      "start": 19.0,
+      "slot": 1.9,
+      "dur": 1.66,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Then copy it, or share a link."
+    },
+    {
+      "n": 6,
+      "start": 21.25,
+      "slot": 3.65,
+      "dur": 2.64,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Paste it anywhere, and everyone gets the point."
+    },
+    {
+      "n": 7,
+      "start": 25.15,
+      "slot": 2.75,
+      "dur": 2.35,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Need motion? Record, trim, and send."
+    },
+    {
+      "n": 8,
+      "start": 30.05,
+      "slot": 1.65,
+      "dur": 1.44,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Snapper. Invite only."
+    }
+  ]
+}
