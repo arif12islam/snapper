@@ -278,13 +278,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         return CGPoint(x: f.minX + p.x * s, y: f.minY + p.y * s)
     }
 
-    /// The canvas is free: annotations can go anywhere (the export grows to include them), except while a
-    /// crop or a background frames the picture, which keeps annotations inside it.
-    private func clampToImage(_ p: CGPoint) -> CGPoint {
-        guard cropRect != nil || showsBackground else { return p }
-        let c = contentRect
-        return CGPoint(x: min(max(p.x, c.minX), c.maxX), y: min(max(p.y, c.minY), c.maxY))
-    }
+    /// The canvas is free: annotations can be drawn, moved and resized anywhere. Without a crop or background the
+    /// export grows to include them; with one, whatever lies outside is cut off.
+    private func clampToImage(_ p: CGPoint) -> CGPoint { p }
 
     /// What the export covers: the picture plus anything drawn outside it.
     private var canvasRect: CGRect {

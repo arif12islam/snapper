@@ -461,30 +461,15 @@ enum AnnotationRenderer {
             if round { return 1 / sqrt((d.x / a) * (d.x / a) + (d.y / b) * (d.y / b)) }
             return min(a / max(abs(d.x), 0.000001), b / max(abs(d.y), 0.000001))
         }
-        // Outline point whose tangent is parallel to the link, on the side given by `n`.
-        func support(_ r: CGRect, _ n: CGPoint) -> CGPoint {
-            let a = max(r.width / 2, 1), b = max(r.height / 2, 1)
-            if round {
-                let h = max(sqrt(a * a * n.x * n.x + b * b * n.y * n.y), 0.000001)
-                return CGPoint(x: r.midX + a * a * n.x / h, y: r.midY + b * b * n.y / h)
-            }
-            let k = min(r.width, r.height) * 0.18 * 0.29
-            let sx: CGFloat = n.x >= 0 ? 1 : -1, sy: CGFloat = n.y >= 0 ? 1 : -1
-            return CGPoint(x: r.midX + sx * (a - k), y: r.midY + sy * (b - k))
-        }
 
-        // Two lines join the enlarged area to its loupe (only while they are apart).
+        // One line joins the enlarged area to its loupe (only while they are apart).
         if dist > reach(S, dir) + reach(Lr, dir) + 2 {
-            let n = CGPoint(x: -dir.y, y: dir.x)
             ctx.saveGState()
-            ctx.setStrokeColor(color.withAlphaComponent(0.9).cgColor)
-            ctx.setLineWidth(lw * 0.8)
+            ctx.setStrokeColor(color.cgColor)
+            ctx.setLineWidth(lw)
             ctx.setLineCap(.round)
-            for sign: CGFloat in [1, -1] {
-                let nn = CGPoint(x: n.x * sign, y: n.y * sign)
-                ctx.move(to: support(S, nn))
-                ctx.addLine(to: support(Lr, nn))
-            }
+            ctx.move(to: CGPoint(x: c.x + dir.x * reach(S, dir), y: c.y + dir.y * reach(S, dir)))
+            ctx.addLine(to: CGPoint(x: L.x - dir.x * reach(Lr, dir), y: L.y - dir.y * reach(Lr, dir)))
             ctx.strokePath()
             ctx.restoreGState()
         }
