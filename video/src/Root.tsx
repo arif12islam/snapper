@@ -3,12 +3,15 @@ import { Composition, continueRender, delayRender, staticFile } from 'remotion';
 import { EXPLAINER_LEN, Explainer } from './Explainer';
 import { APP_H, APP_W, FakeApp } from './FakeApp';
 
-const handle = delayRender('Loading Inter');
-const inter = new FontFace('Inter', `url(${staticFile('fonts/inter.woff2')}) format('woff2')`, { weight: '100 900' });
-inter
-  .load()
-  .then((font) => {
-    document.fonts.add(font);
+const handle = delayRender('Loading fonts');
+const faces = [
+  new FontFace('Inter', `url(${staticFile('fonts/inter.woff2')}) format('woff2')`, { weight: '100 900' }),
+  new FontFace('Instrument Serif', `url(${staticFile('fonts/serif-italic.woff2')}) format('woff2')`, { style: 'italic', weight: '400' }),
+  new FontFace('Instrument Serif', `url(${staticFile('fonts/serif.woff2')}) format('woff2')`, { style: 'normal', weight: '400' }),
+];
+Promise.all(faces.map((face) => face.load()))
+  .then((loaded) => {
+    loaded.forEach((face) => document.fonts.add(face));
     continueRender(handle);
   })
   .catch(() => continueRender(handle));

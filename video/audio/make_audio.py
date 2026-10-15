@@ -343,6 +343,11 @@ events += [
     (O + oc['brand'], sfx_chime((88, 95), 0.08), 1.0),
 ]
 events += [(C + f, sfx_msg(), 1.0) for f in TL['chat']['messages']]
+# Hook: confused speech bubbles pop in, then everything converges.
+events += [(H + f, sfx_pop(), 0.55) for f in hk['bubbles']]
+events.append((H + hk['converge'][0] - 4, sfx_whoosh((hk['converge'][1] - hk['converge'][0]) / FPS + 0.25, 0.7), 0.9))
+# Intro: feature chips arrive one by one.
+events += [(I + TL['intro']['chips'] + i * 5, sfx_tick(), 0.7) for i in range(6)]
 text = 'Best month yet'
 for i in range(len(text)):
     frame = P + pt['textStart'] + (pt['textEnd'] - pt['textStart']) * (i + 1) / len(text)

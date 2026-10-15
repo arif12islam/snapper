@@ -3,6 +3,7 @@ import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentF
 import { APP_H, APP_W, BEST, FakeApp, barRect, emailCell } from './FakeApp';
 import { Icon } from './Icons';
 import TL from './timeline.json';
+import { C } from './palette';
 
 // ---------- Timeline (frames at 30 fps) ----------
 const T = TL.product;
@@ -32,18 +33,59 @@ const BLUR = emailCell(1);
 const MAG = { tx: 409, ty: 199, lx: 660, ly: 104, r: 72, zoom: 2.6 };
 
 // ---------- Backgrounds ----------
-const Wallpaper: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
-  <div
-    style={{
-      position: 'absolute', inset: 0,
-      background: NAVY,
-      ...style,
-    }}
-  />
+// A flat, colourful desktop: overlapping solid discs, no gradients.
+const Wallpaper: React.FC = () => (
+  <div style={{ position: 'absolute', inset: 0, background: C.sky, overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', width: 620, height: 620, borderRadius: '50%', background: C.sun, left: -210, top: -270 }} />
+    <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: C.mint, right: 230, top: -130 }} />
+    <div style={{ position: 'absolute', width: 540, height: 540, borderRadius: '50%', background: C.lilac, left: 160, bottom: -350 }} />
+    <div style={{ position: 'absolute', width: 900, height: 900, borderRadius: '50%', background: C.coral, right: -280, bottom: -440 }} />
+  </div>
 );
 
-const NAVY = '#1b1b4d';
-const frameColor = (f: number) => (f >= T.cyc3 ? NAVY : f >= T.cyc2 ? PAPER : f >= T.cyc1 ? RED : NAVY);
+const NAVY = C.ink;
+// Background frame steps through the palette on the beat.
+const frameColor = (f: number) => (f >= T.cyc3 ? C.sky : f >= T.cyc2 ? C.mint : f >= T.cyc1 ? C.sun : C.coral);
+
+// ---------- Camera: pushes in on each action, then pulls back ----------
+type Cam = [number, number, number, number]; // frame, zoom, focus x, focus y (screen space at zoom 1)
+const camKeys = (): Cam[] => {
+  const rect = toScreen((RECT.x0 + RECT.x1) / 2, (RECT.y0 + RECT.y1) / 2);
+  const arrow = toScreen(680, 330);
+  const blur = toScreen(BLUR.x + BLUR.w / 2, BLUR.y + BLUR.h / 2);
+  const mag = toScreen((MAG.tx + MAG.lx) / 2, (MAG.ty + MAG.ly) / 2 + 30);
+  return [
+    [0, 1, 800, 500],
+    [T.flyEnd + 6, 1, 800, 500],
+    [T.rectStart - 10, 1.32, ...rect],
+    [T.c1 + 10, 1.32, ...rect],
+    [T.arrowStart - 4, 1.26, ...arrow],
+    [T.c2 + 8, 1.26, ...arrow],
+    [T.blurStart - 6, 1.42, ...blur],
+    [T.blurEnd + 14, 1.42, ...blur],
+    [T.magStart - 6, 1.3, ...mag],
+    [T.magEnd + 16, 1.3, ...mag],
+    [T.bgClick - 14, 1, 800, 500],
+    [PRODUCT_LEN, 1, 800, 500],
+  ];
+};
+const camera = (f: number) => {
+  const keys = camKeys();
+  let z = 1, x = 800, y = 500;
+  for (let i = 1; i < keys.length; i++) {
+    const [f0, z0, x0, y0] = keys[i - 1];
+    const [f1, z1, x1, y1] = keys[i];
+    if (f <= f1 || i === keys.length - 1) {
+      const t = interpolate(f, [f0, f1], [0, 1], { ...clamp, easing: Easing.bezier(0.65, 0, 0.35, 1) });
+      z = z0 + (z1 - z0) * t; x = x0 + (x1 - x0) * t; y = y0 + (y1 - y0) * t;
+      break;
+    }
+  }
+  // Keep the view inside the editor window.
+  x = Math.min(Math.max(x, 50 + 800 / z), 1550 - 800 / z);
+  y = Math.min(Math.max(y, 40 + 500 / z), 960 - 500 / z);
+  return { z, x, y };
+};
 
 // ---------- Cursor ----------
 type Key = [number, number, number];
@@ -447,18 +489,21 @@ export const ProductScene: React.FC = () => {
 
   const editorOpacity = fly * (1 - out);
   const sceneScale = 1 - out * 0.08;
+  const cam = camera(f);
+  const swoop = Math.sin(Math.PI * fly);
+  const camTransform = `perspective(2400px) translate(${(800 - cam.x) * cam.z}px, ${(500 - cam.y) * cam.z}px) scale(${cam.z * sceneScale}) rotateX(${swoop * 14}deg) rotateY(${swoop * -8}deg)`;
   const blurAmount = f >= T.blurEnd ? 7 * spring({ frame: f - T.blurEnd, fps, config: { damping: 20 } }) : 0;
 
   return (
-    <AbsoluteFill style={{ fontFamily: 'Inter, sans-serif', overflow: 'hidden', background: NAVY }}>
+    <AbsoluteFill style={{ fontFamily: 'Inter, sans-serif', overflow: 'hidden', background: C.sky }}>
       <Wallpaper />
       <div style={{ opacity: 1 - fly }}>
         <MenuBar />
       </div>
-      <AbsoluteFill style={{ background: 'rgba(8,8,24,0.45)', opacity: fly * (1 - out) }} />
+      <AbsoluteFill style={{ background: 'rgba(27,27,77,0.28)', opacity: fly * (1 - out) }} />
 
       {f < PRODUCT_LEN + 1 ? (
-        <AbsoluteFill style={{ transform: `scale(${sceneScale})`, opacity: f < T.flyStart ? 1 : 1 - out, filter: out > 0 ? `blur(${out * 10}px)` : undefined }}>
+        <AbsoluteFill style={{ transform: camTransform, transformOrigin: '800px 500px', opacity: f < T.flyStart ? 1 : 1 - out, filter: out > 0 ? `blur(${out * 10}px)` : undefined }}>
           {/* Editor window */}
           <div
             style={{
