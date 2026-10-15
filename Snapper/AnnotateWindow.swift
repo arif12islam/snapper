@@ -321,7 +321,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             let images = tools.map {
                 NSImage(systemSymbolName: $0.symbol, accessibilityDescription: $0.title) ?? NSImage()
             }
-            let seg = NSSegmentedControl(images: images, trackingMode: .selectOne,
+            let seg = DividedSegmentedControl(images: images, trackingMode: .selectOne,
                                          target: self, action: #selector(toolSegmentPicked(_:)))
             seg.tag = groupIndex
             seg.segmentStyle = .separated
@@ -697,31 +697,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         ]
         for (control, view) in styleGroups { view.isHidden = !(visible[control] ?? false) }
 
-        let hint: String
-        switch tool {
-        case .select:
-            hint = kind == nil ? "Click an annotation to edit it, drag handles to resize, arrow keys to nudge" : ""
-        case .crop:
-            hint = canvas.cropRect == nil
-                ? "Drag to choose the area to keep. Edges snap to the picture"
-                : "Drag the corners or move the box. Press Return to see the result"
-        case .pixelate, .blur:
-            hint = "Drag over anything you want to hide"
-        case .spotlight:
-            hint = "Drag over what to emphasise; the rest dims"
-        case .highlighter:
-            hint = "Drag across text: the stroke fits the line height. Shift for a straight line"
-        case .arrow, .line, .rectangle:
-            hint = "Drag to draw. Click an object to move it; hold ⌥ to draw over it"
-        case .magnifier:
-            hint = "Drag over a detail. Drag the loupe to move it, the dot on its edge to resize it"
-        case .number:
-            hint = "Click to place 1, 2, 3…"
-        case .text:
-            hint = bubbleSeg.selectedSegment != 1 ? "Press on what to point at, then drag to place the box" : "Click to type"
-        default:
-            hint = ""
-        }
+        // The bar stays the same compact size for every tool; only cropping needs a word of guidance.
+        let hint = tool == .crop ? (canvas.cropRect == nil ? "Drag to crop" : "Return to apply") : ""
         hintLabel.stringValue = hint
         hintLabel.isHidden = hint.isEmpty
         removeCropButton.isHidden = !(tool == .crop && canvas.cropRect != nil)
@@ -1062,6 +1039,37 @@ final class AnnotateNSWindow: NSWindow {
              Selector(("snapperZoomIn:")), Selector(("snapperZoomOut:")),
              Selector(("snapperActualSize:")), Selector(("snapperFit:")): return true
         default: return super.validateMenuItem(item)
+        }
+    }
+}
+
+
+/// Segmented control whose dividers stay visible while the pointer is over it (the system hides them on hover).
+final class DividedSegmentedControl: NSSegmentedControl {
+    private final class Line: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func draw(_ dirtyRect: NSRect) {
+            NSColor.tertiaryLabelColor.setFill()
+            bounds.fill()
+        }
+    }
+
+    private var lines: [Line] = []
+
+    override func layout() {
+        super.layout()
+        let n = segmentCount
+        while lines.count < max(n - 1, 0) {
+            let v = Line()
+            addSubview(v)
+            lines.append(v)
+        }
+        var total: CGFloat = 0
+        for i in 0..<n { total += width(forSegment: i) }
+        var x = (bounds.width - total) / 2
+        for (i, v) in lines.enumerated() {
+            x += width(forSegment: i)
+            v.frame = NSRect(x: x - 0.5, y: (bounds.height - 16) / 2, width: 1, height: 16)
         }
     }
 }
