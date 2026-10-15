@@ -72,11 +72,12 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     private var dragStart: CGPoint?
     private var working: AnnotationObject?
     private var movingLast: CGPoint?
+    private var movingLoupe = false             // dragging a magnifier's loupe only (not the whole object)
     private var didPushMoveUndo = false
     private var pendingCrop: CGRect?
     private var nextZ = 1
 
-    private enum Handle: Equatable { case corner(Int), edge(Int), rotate, start, end, control, tip }
+    private enum Handle: Equatable { case corner(Int), edge(Int), rotate, start, end, control, tip, loupe }
     private var activeHandle: Handle?
     private var lastSmart: (id: UUID, time: Date)?
     private var interacting = false              // a drawing tool is active but the drag moves an existing object
@@ -155,6 +156,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     private func balanceInsets() -> NSEdgeInsets {
         let key = contentRect
         if let c = balanceCache, c.key == key { return c.insets }
+        if !CGRect(origin: .zero, size: imageSize).contains(key) { return NSEdgeInsetsZero }
         var insets = NSEdgeInsetsZero
         if let region = baseImage.cropping(to: key.integral) { insets = BackgroundMaker.balancedInsets(region) }
         balanceCache = (key, insets)
@@ -224,8 +226,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         let s = fitScale
         let p = presentationRect
         let w = p.width * s, h = p.height * s
-        let maxX = w > bounds.width ? (w - bounds.width) / 2 + 60 : 0
-        let maxY = h > bounds.height ? (h - bounds.height) / 2 + 60 : 0
+        // Free canvas: the picture can be pushed almost out of view in any direction.
+        let maxX = max((w + bounds.width) / 2 - 120, 0)
+        let maxY = max((h + bounds.height) / 2 - 120, 0)
         pan.x = min(max(pan.x, -maxX), maxX)
         pan.y = min(max(pan.y, -maxY), maxY)
     }
@@ -275,10 +278,20 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         return CGPoint(x: f.minX + p.x * s, y: f.minY + p.y * s)
     }
 
-    /// Clamps to the visible content (the crop, once applied).
+    /// The canvas is free: annotations can go anywhere (the export grows to include them), except while a
+    /// crop or a background frames the picture, which keeps annotations inside it.
     private func clampToImage(_ p: CGPoint) -> CGPoint {
+        guard cropRect != nil || showsBackground else { return p }
         let c = contentRect
         return CGPoint(x: min(max(p.x, c.minX), c.maxX), y: min(max(p.y, c.minY), c.maxY))
+    }
+
+    /// What the export covers: the picture plus anything drawn outside it.
+    private var canvasRect: CGRect {
+        guard cropRect == nil, tool != .crop, !showsBackground else { return contentRect }
+        var all = objects
+        if let w = working { all.append(w) }
+        return AnnotationRenderer.canvasRect(imageSize: imageSize, objects: all)
     }
 
     // MARK: - Live zoom / pan snapshot
@@ -391,7 +404,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     func exportImage() -> CGImage? {
         commitTextEditing()
-        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect)
+        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect, expand: background.isNone)
     }
 
     /// Exactly what the canvas shows: annotations, crop, Auto Balance and background.
@@ -665,7 +678,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                     (.corner(2), CGPoint(x: r.maxX, y: r.maxY)), (.corner(3), CGPoint(x: r.minX, y: r.maxY)),
                     (.edge(0), CGPoint(x: r.midX, y: r.minY)), (.edge(1), CGPoint(x: r.maxX, y: r.midY)),
                     (.edge(2), CGPoint(x: r.midX, y: r.maxY)), (.edge(3), CGPoint(x: r.minX, y: r.midY)),
-                    (.control, o.magLoupeCenter)]
+                    (.loupe, CGPoint(x: o.magLoupeRect.maxX, y: o.magLoupeRect.midY))]
         default:
             var list: [(Handle, CGPoint)] = []
             let r = o.rect
@@ -702,6 +715,12 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         case .end: o.end = p
         case .tip: o.end = p
         case .control: o.points = [p]
+        case .loupe:
+            // The handle on the loupe's edge sets its size: the left edge stays, the zoom follows the width.
+            let s = o.magSourceRect, l = o.magLoupeRect
+            let z = min(max((p.x - l.minX) / max(s.width, 1), 1.2), 12)
+            o.style.magnify = z
+            o.points = [CGPoint(x: l.minX + s.width * z / 2, y: l.midY)]
         case .rotate:
             let r = o.rect
             var deg = atan2(p.y - r.midY, p.x - r.midX) * 180 / .pi + 90
@@ -811,8 +830,10 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         }
         let hit = hitObject(at: p)
         selectedID = hit?.id
+        movingLoupe = false
         if let hit {
             movingLast = p
+            movingLoupe = hit.kind == .magnifier && hit.magLoupeContains(p, slack: 0)
             didPushMoveUndo = false
             onSelectionStyle?(hit.style)
             NSCursor.closedHand.set()
@@ -910,7 +931,12 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             guard let id = selectedID, let last = movingLast,
                   let i = objects.firstIndex(where: { $0.id == id }) else { return }
             if !didPushMoveUndo { pushUndo(); didPushMoveUndo = true }
-            objects[i].translate(by: CGVector(dx: p.x - last.x, dy: p.y - last.y))
+            if movingLoupe, objects[i].kind == .magnifier {
+                let c = objects[i].magLoupeCenter
+                objects[i].points = [CGPoint(x: c.x + p.x - last.x, y: c.y + p.y - last.y)]
+            } else {
+                objects[i].translate(by: CGVector(dx: p.x - last.x, dy: p.y - last.y))
+            }
             movingLast = p
             note(objects[i])
         case .crop:
@@ -938,12 +964,14 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             working?.end = end
             note(working)
         }
-        if full || dirty.isEmpty { needsDisplay = true } else { invalidate(dirty, pad: pad) }
+        let imageBounds = CGRect(origin: .zero, size: imageSize).insetBy(dx: -pad, dy: -pad)
+        let inside = dirty.allSatisfy { imageBounds.contains($0) }
+        if full || dirty.isEmpty || !inside { needsDisplay = true } else { invalidate(dirty, pad: pad) }
     }
 
     override func mouseUp(with event: NSEvent) {
         defer {
-            dragStart = nil; movingLast = nil; activeHandle = nil; interacting = false; needsDisplay = true
+            dragStart = nil; movingLast = nil; movingLoupe = false; activeHandle = nil; interacting = false; needsDisplay = true
             if hoverCursor != nil || tool == .select { NSCursor.openHand.set() }
             updateHover(event)
         }
@@ -1205,6 +1233,16 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         setZoom(zoom * (1 + event.magnification * 1.2), anchor: convert(event.locationInWindow, from: nil), live: true)
     }
 
+    /// Two-finger twist turns the selected annotation.
+    override func rotate(with event: NSEvent) {
+        guard let id = selectedID, let i = objects.firstIndex(where: { $0.id == id }), objects[i].supportsRotation else { return }
+        if event.phase == .began { pushUndo() }
+        objects[i].rotation = Self.normalized(objects[i].rotation - CGFloat(event.rotation))
+        onSelectionRotation?(selectedRotation)
+        if event.phase == .ended { onChange?() }
+        needsDisplay = true
+    }
+
     override func smartMagnify(with event: NSEvent) {
         if abs(zoom - 1) > 0.01 { fitView() } else { actualSize() }
     }
@@ -1420,12 +1458,14 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                 ctx.restoreGState()
             }
         } else {
-            clipPath = CGPath(rect: cv, transform: nil)
+            let canvasView = viewRect(canvasRect)
+            clipPath = CGPath(rect: canvasView, transform: nil)
             ctx.saveGState()
             ctx.setShadow(offset: CGSize(width: 0, height: -2), blur: 10, color: NSColor.black.withAlphaComponent(0.35).cgColor)
             ctx.setFillColor(NSColor.white.cgColor)
-            ctx.fill(cv)
+            ctx.fill(canvasView)
             ctx.restoreGState()
+            if canvasRect != visible { drawChecker(ctx, in: canvasView) }
         }
 
         ctx.saveGState()
@@ -1464,6 +1504,26 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             ctx.setLineDash(phase: 0, lengths: [5 / s, 4 / s])
             ctx.stroke(r)
             ctx.restoreGState()
+        }
+        ctx.restoreGState()
+    }
+
+    /// Transparent-looking backdrop for the part of the canvas that has no picture.
+    private func drawChecker(_ ctx: CGContext, in rect: CGRect) {
+        let r = rect.intersection(bounds.insetBy(dx: -20, dy: -20))
+        guard !r.isNull else { return }
+        let t: CGFloat = 10
+        ctx.saveGState()
+        ctx.clip(to: r)
+        ctx.setFillColor(NSColor(white: 0.97, alpha: 1).cgColor)
+        ctx.fill(r)
+        ctx.setFillColor(NSColor(white: 0.9, alpha: 1).cgColor)
+        let i0 = Int(floor((r.minX - rect.minX) / t)), i1 = Int(ceil((r.maxX - rect.minX) / t))
+        let j0 = Int(floor((r.minY - rect.minY) / t)), j1 = Int(ceil((r.maxY - rect.minY) / t))
+        for j in j0..<max(j1, j0) {
+            for i in i0..<max(i1, i0) where (i + j) & 1 == 1 {
+                ctx.fill(CGRect(x: rect.minX + CGFloat(i) * t, y: rect.minY + CGFloat(j) * t, width: t, height: t))
+            }
         }
         ctx.restoreGState()
     }

@@ -88,6 +88,7 @@ struct AnnotationStyle: Codable, Equatable {
     var shapeStyle: Int = 0 { didSet { filled = shapeStyle >= 2 } }   // 0 rounded outline, 1 sharp outline, 2 tinted, 3 solid
     var ellipse: Bool = false   // Shape tool: ellipse instead of rectangle
     var magnify: CGFloat = 2.5  // magnifier zoom
+    var magRound: Bool = true   // magnifier: round loupe (true) or rounded box
     var smartShapes: Bool = true  // pen: turn clean strokes into shapes
     var bubble: Bool = true     // text tool: speech-bubble box (true) or plain text (false)
     var effectMode: Int = 0     // blur: 0 smooth, 1 secure.  spotlight: 0 rectangle, 1 ellipse
@@ -102,7 +103,7 @@ struct AnnotationStyle: Codable, Equatable {
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case colorHex, lineWidth, fontSize, arrowStyle, textStyle, filled, effectMode, bubble, shapeStyle, ellipse, magnify, smartShapes
+        case colorHex, lineWidth, fontSize, arrowStyle, textStyle, filled, effectMode, bubble, shapeStyle, ellipse, magnify, smartShapes, magRound
     }
 
     // Tolerant decoding: files from older versions miss newer keys.
@@ -120,6 +121,7 @@ struct AnnotationStyle: Codable, Equatable {
         ellipse = try c.decodeIfPresent(Bool.self, forKey: .ellipse) ?? false
         magnify = try c.decodeIfPresent(CGFloat.self, forKey: .magnify) ?? 2.5
         smartShapes = try c.decodeIfPresent(Bool.self, forKey: .smartShapes) ?? true
+        magRound = try c.decodeIfPresent(Bool.self, forKey: .magRound) ?? true
     }
 }
 
@@ -170,6 +172,14 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
     var magLoupeRect: CGRect {
         let l = magLoupeSize, c = magLoupeCenter
         return CGRect(x: c.x - l.width / 2, y: c.y - l.height / 2, width: l.width, height: l.height)
+    }
+
+    /// Whether a point lies on the loupe itself.
+    func magLoupeContains(_ p: CGPoint, slack: CGFloat) -> Bool {
+        let l = magLoupeRect.insetBy(dx: -slack, dy: -slack)
+        guard style.magRound else { return l.contains(p) }
+        let lx = (p.x - l.midX) / max(l.width / 2, 1), ly = (p.y - l.midY) / max(l.height / 2, 1)
+        return hypot(lx, ly) <= 1
     }
 
     /// The rectangle whose corner and edge handles resize the object.
@@ -292,13 +302,16 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
             return rect.insetBy(dx: -tolerance, dy: -tolerance).contains(p)
                 || hypot(p.x - end.x, p.y - end.y) <= tolerance * 1.5
         case .magnifier:
-            // Anywhere on the loupe, or on the ring around the enlarged area.
-            let l = magLoupeRect
-            let lx = (p.x - l.midX) / max(l.width / 2, 1), ly = (p.y - l.midY) / max(l.height / 2, 1)
-            if hypot(lx, ly) <= 1 + tolerance / max(min(l.width, l.height) / 2, 1) { return true }
+            // Anywhere on the loupe, or on the outline around the enlarged area.
+            if magLoupeContains(p, slack: tolerance) { return true }
             let s = magSourceRect
-            let sx = (p.x - s.midX) / max(s.width / 2, 1), sy = (p.y - s.midY) / max(s.height / 2, 1)
-            return abs(hypot(sx, sy) - 1) * min(s.width, s.height) / 2 <= tolerance + style.lineWidth / 2
+            let t = tolerance + style.lineWidth / 2
+            if style.magRound {
+                let sx = (p.x - s.midX) / max(s.width / 2, 1), sy = (p.y - s.midY) / max(s.height / 2, 1)
+                return abs(hypot(sx, sy) - 1) * min(s.width, s.height) / 2 <= t
+            }
+            let outer = s.insetBy(dx: -t, dy: -t), inner = s.insetBy(dx: t, dy: t)
+            return outer.contains(p) && !(inner.width > 0 && inner.height > 0 && inner.contains(p))
         }
     }
 

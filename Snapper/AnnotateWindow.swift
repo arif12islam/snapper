@@ -621,7 +621,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         s.arrowStyle = [0, 2, 1, 3][max(0, min(3, arrowSeg.selectedSegment))]
         s.textStyle = max(0, textPopup.indexOfSelectedItem)
         s.shapeStyle = max(0, shapeStyleSeg.selectedSegment)
-        s.ellipse = shapeKindSeg.selectedSegment == 1
+        if activeKind == .magnifier { s.magRound = shapeKindSeg.selectedSegment == 1 } else { s.ellipse = shapeKindSeg.selectedSegment == 1 }
         s.magnify = CGFloat(magSlider.doubleValue)
         s.smartShapes = smartCheck.state == .on
         s.bubble = bubbleSeg.selectedSegment != 1
@@ -638,7 +638,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         widthSlider.doubleValue = Double(style.lineWidth)
         sizeSlider.doubleValue = Double(style.fontSize)
         arrowSeg.selectedSegment = Self.arrowSegment(for: style.arrowStyle)
-        shapeKindSeg.selectedSegment = style.ellipse ? 1 : 0
+        shapeKindSeg.selectedSegment = (activeKind == .magnifier ? style.magRound : style.ellipse) ? 1 : 0
         shapeStyleSeg.selectedSegment = max(0, min(3, style.shapeStyle))
         magSlider.doubleValue = Double(style.magnify)
         smartCheck.state = style.smartShapes ? .on : .off
@@ -683,7 +683,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         let visible: [StyleControl: Bool] = [
             .color: kind != nil && !isAny(.pixelate, .blur, .spotlight, .image),
             .stroke: isAny(.arrow, .line, .rectangle, .ellipse, .pencil, .highlighter, .magnifier),
-            .shapeKind: isAny(.rectangle, .ellipse),
+            .shapeKind: isAny(.rectangle, .ellipse, .magnifier),
             .smart: isAny(.pencil),
             .zoom: isAny(.magnifier),
             .arrow: isAny(.arrow),
@@ -714,7 +714,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         case .arrow, .line, .rectangle:
             hint = "Drag to draw. Click an object to move it; hold ⌥ to draw over it"
         case .magnifier:
-            hint = "Drag over a detail. Drag the loupe by its middle handle to move it"
+            hint = "Drag over a detail. Drag the loupe to move it, the dot on its edge to resize it"
         case .number:
             hint = "Click to place 1, 2, 3…"
         case .text:

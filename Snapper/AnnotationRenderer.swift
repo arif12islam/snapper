@@ -84,21 +84,39 @@ enum AnnotationRenderer {
         return path
     }
 
-    /// Renders the final bitmap (crop applied) for export.
-    static func exportImage(base: CGImage, objects: [AnnotationObject], cropRect: CGRect?) -> CGImage? {
+    /// The area the export covers when annotations reach beyond the picture (image space, top-left origin).
+    static func canvasRect(imageSize: CGSize, objects: [AnnotationObject]) -> CGRect {
+        let image = CGRect(origin: .zero, size: imageSize)
+        var r = image
+        for o in objects where o.kind != .spotlight {
+            let box = o.rect
+            if image.contains(box) { continue }
+            let pad = o.style.lineWidth + (o.kind == .magnifier ? 14 : 2)
+            r = r.union(box.insetBy(dx: -pad, dy: -pad))
+        }
+        return r.integral
+    }
+
+    /// Renders the final bitmap (crop applied) for export. Without a crop the picture grows to include any
+    /// annotation drawn outside it (transparent where there is no picture).
+    static func exportImage(base: CGImage, objects: [AnnotationObject], cropRect: CGRect?, expand: Bool = true) -> CGImage? {
         let width = base.width, height = base.height
-        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+        let imageSize = CGSize(width: width, height: height)
+        let canvas = (expand && cropRect == nil) ? canvasRect(imageSize: imageSize, objects: objects)
+                                                 : CGRect(origin: .zero, size: imageSize)
+        let cw = max(Int(canvas.width), 1), ch = max(Int(canvas.height), 1)
+        guard let ctx = CGContext(data: nil, width: cw, height: ch, bitsPerComponent: 8,
                                   bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         else { return nil }
 
-        // Make (0,0) the top-left corner.
-        ctx.translateBy(x: 0, y: CGFloat(height))
+        // Make the canvas's top-left corner the origin of image space.
+        ctx.translateBy(x: -canvas.minX, y: CGFloat(ch) + canvas.minY)
         ctx.scaleBy(x: 1, y: -1)
 
         let previous = NSGraphicsContext.current
         NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: true)
-        render(into: ctx, base: base, objects: objects, imageSize: CGSize(width: width, height: height))
+        render(into: ctx, base: base, objects: objects, imageSize: imageSize)
         NSGraphicsContext.current = previous
 
         guard let full = ctx.makeImage() else { return nil }
@@ -421,8 +439,15 @@ enum AnnotationRenderer {
 
     // MARK: - Magnifier
 
+    private static func magPath(_ r: CGRect, round: Bool) -> CGPath {
+        if round { return CGPath(ellipseIn: r, transform: nil) }
+        let k = min(r.width, r.height) * 0.18
+        return CGPath(roundedRect: r, cornerWidth: k, cornerHeight: k, transform: nil)
+    }
+
     private static func drawMagnifier(_ object: AnnotationObject, in ctx: CGContext, base: CGImage) {
         let S = object.magSourceRect, Lr = object.magLoupeRect
+        let round = object.style.magRound
         let c = CGPoint(x: S.midX, y: S.midY), L = CGPoint(x: Lr.midX, y: Lr.midY)
         let color = object.style.color
         let lw = max(2, object.style.lineWidth * 0.7)
@@ -430,36 +455,56 @@ enum AnnotationRenderer {
         let dist = max(hypot(dx, dy), 0.001)
         let dir = CGPoint(x: dx / dist, y: dy / dist)
 
-        // Distance from an ellipse's centre to its edge along `dir`.
-        func reach(_ r: CGRect) -> CGFloat {
+        // Distance from a shape's centre to its edge along `d`.
+        func reach(_ r: CGRect, _ d: CGPoint) -> CGFloat {
             let a = max(r.width / 2, 1), b = max(r.height / 2, 1)
-            return 1 / sqrt((dir.x / a) * (dir.x / a) + (dir.y / b) * (dir.y / b))
+            if round { return 1 / sqrt((d.x / a) * (d.x / a) + (d.y / b) * (d.y / b)) }
+            return min(a / max(abs(d.x), 0.000001), b / max(abs(d.y), 0.000001))
         }
-        let rs = reach(S), rl = reach(Lr)
+        // Outline point whose tangent is parallel to the link, on the side given by `n`.
+        func support(_ r: CGRect, _ n: CGPoint) -> CGPoint {
+            let a = max(r.width / 2, 1), b = max(r.height / 2, 1)
+            if round {
+                let h = max(sqrt(a * a * n.x * n.x + b * b * n.y * n.y), 0.000001)
+                return CGPoint(x: r.midX + a * a * n.x / h, y: r.midY + b * b * n.y / h)
+            }
+            let k = min(r.width, r.height) * 0.18 * 0.29
+            let sx: CGFloat = n.x >= 0 ? 1 : -1, sy: CGFloat = n.y >= 0 ? 1 : -1
+            return CGPoint(x: r.midX + sx * (a - k), y: r.midY + sy * (b - k))
+        }
 
-        // Link between the area and its loupe (only while they are apart).
-        if dist > rs + rl + 2 {
-            ctx.setStrokeColor(color.withAlphaComponent(0.85).cgColor)
-            ctx.setLineWidth(lw * 0.7)
-            ctx.move(to: CGPoint(x: c.x + dir.x * rs, y: c.y + dir.y * rs))
-            ctx.addLine(to: CGPoint(x: L.x - dir.x * rl, y: L.y - dir.y * rl))
+        // Two lines join the enlarged area to its loupe (only while they are apart).
+        if dist > reach(S, dir) + reach(Lr, dir) + 2 {
+            let n = CGPoint(x: -dir.y, y: dir.x)
+            ctx.saveGState()
+            ctx.setStrokeColor(color.withAlphaComponent(0.9).cgColor)
+            ctx.setLineWidth(lw * 0.8)
+            ctx.setLineCap(.round)
+            for sign: CGFloat in [1, -1] {
+                let nn = CGPoint(x: n.x * sign, y: n.y * sign)
+                ctx.move(to: support(S, nn))
+                ctx.addLine(to: support(Lr, nn))
+            }
             ctx.strokePath()
+            ctx.restoreGState()
         }
 
-        // Ring around the area being enlarged.
+        // Outline around the area being enlarged.
         ctx.setStrokeColor(color.cgColor)
-        ctx.setLineWidth(lw * 0.8)
-        ctx.strokeEllipse(in: S)
+        ctx.setLineWidth(lw)
+        ctx.addPath(magPath(S, round: round))
+        ctx.strokePath()
 
-        // Loupe: shadow, the enlarged picture clipped to the oval, then a ring.
+        // Loupe: shadow, the enlarged picture clipped to its shape, then the outline.
         ctx.saveGState()
         ctx.setShadow(offset: CGSize(width: 0, height: 3), blur: 10, color: NSColor.black.withAlphaComponent(0.35).cgColor)
         ctx.setFillColor(NSColor.white.cgColor)
-        ctx.fillEllipse(in: Lr)
+        ctx.addPath(magPath(Lr, round: round))
+        ctx.fillPath()
         ctx.restoreGState()
 
         ctx.saveGState()
-        ctx.addEllipse(in: Lr)
+        ctx.addPath(magPath(Lr, round: round))
         ctx.clip()
         let z = max(object.style.magnify, 1.2)
         ctx.translateBy(x: L.x, y: L.y)
@@ -471,7 +516,8 @@ enum AnnotationRenderer {
 
         ctx.setStrokeColor(color.cgColor)
         ctx.setLineWidth(lw)
-        ctx.strokeEllipse(in: Lr)
+        ctx.addPath(magPath(Lr, round: round))
+        ctx.strokePath()
     }
 
     // MARK: - Arrows
