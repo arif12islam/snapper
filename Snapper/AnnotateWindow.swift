@@ -61,6 +61,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private let backgroundButton = NSButton()
     private var backgroundPopover: BackgroundPopover?
     private let savePopup = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let canvasPopup = NSPopUpButton(frame: .zero, pullsDown: true)
 
     private let historyView = NSStackView()
     private weak var bottomUndo: NSButton?
@@ -505,6 +506,11 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         let addImage = iconButton(symbol: "photo.badge.plus", tooltip: "Add a picture (or drop / paste one onto the canvas)",
                                   action: #selector(addImageAction))
 
+        canvasPopup.isBordered = false
+        canvasPopup.toolTip = "Canvas: let annotations extend past the picture"
+        canvasPopup.widthAnchor.constraint(equalToConstant: 52).isActive = true
+        rebuildCanvasMenu()
+
         let zoomOut = iconButton(symbol: "minus.magnifyingglass", tooltip: "Zoom out (⌘−)", action: #selector(zoomOutAction))
         let zoomIn = iconButton(symbol: "plus.magnifyingglass", tooltip: "Zoom in (⌘+)", action: #selector(zoomInAction))
         let fit = iconButton(symbol: "arrow.up.left.and.arrow.down.right", tooltip: "Fit to window (⌘0). ⌘1 = actual size",
@@ -516,7 +522,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         zoomLabel.widthAnchor.constraint(equalToConstant: 44).isActive = true
 
         let bar = row([deleteButton, divider(),
-                       rotateLeft, rotateRight, flipH, flipV, resize, divider(), addImage, divider(),
+                       rotateLeft, rotateRight, flipH, flipV, resize, divider(), addImage, canvasPopup, divider(),
                        zoomOut, zoomLabel, zoomIn, fit], spacing: 4)
         bar.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
         return bar
@@ -720,6 +726,33 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         canvas.tool = tools[index]
         window.makeFirstResponder(canvas)
     }
+
+    private func rebuildCanvasMenu() {
+        canvasPopup.removeAllItems()
+        canvasPopup.addItem(withTitle: "")
+        canvasPopup.item(at: 0)?.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right.square", accessibilityDescription: "Canvas")
+        let extend = NSMenuItem(title: "Extend canvas for annotations", action: #selector(toggleExtendCanvas), keyEquivalent: "")
+        extend.target = self
+        extend.state = canvas.extendCanvas ? .on : .off
+        let transparent = NSMenuItem(title: "Added area: transparent", action: #selector(setTransparentFill), keyEquivalent: "")
+        transparent.target = self
+        transparent.state = canvas.extendFillWhite ? .off : .on
+        let white = NSMenuItem(title: "Added area: white", action: #selector(setWhiteFill), keyEquivalent: "")
+        white.target = self
+        white.state = canvas.extendFillWhite ? .on : .off
+        canvasPopup.menu?.addItem(extend)
+        canvasPopup.menu?.addItem(transparent)
+        canvasPopup.menu?.addItem(white)
+    }
+
+    @objc private func toggleExtendCanvas() {
+        canvas.extendCanvas.toggle()
+        rebuildCanvasMenu()
+        Toast.show(canvas.extendCanvas ? "Canvas grows to fit annotations" : "Annotations stay inside the picture")
+    }
+
+    @objc private func setTransparentFill() { canvas.extendFillWhite = false; rebuildCanvasMenu() }
+    @objc private func setWhiteFill() { canvas.extendFillWhite = true; rebuildCanvasMenu() }
 
     @objc private func backgroundButtonTapped() {
         if backgroundPopover == nil {

@@ -99,7 +99,7 @@ enum AnnotationRenderer {
 
     /// Renders the final bitmap (crop applied) for export. Without a crop the picture grows to include any
     /// annotation drawn outside it (transparent where there is no picture).
-    static func exportImage(base: CGImage, objects: [AnnotationObject], cropRect: CGRect?, expand: Bool = true) -> CGImage? {
+    static func exportImage(base: CGImage, objects: [AnnotationObject], cropRect: CGRect?, expand: Bool = true, whiteFill: Bool = false) -> CGImage? {
         let width = base.width, height = base.height
         let imageSize = CGSize(width: width, height: height)
         let canvas = (expand && cropRect == nil) ? canvasRect(imageSize: imageSize, objects: objects)
@@ -113,6 +113,10 @@ enum AnnotationRenderer {
         // Make the canvas's top-left corner the origin of image space.
         ctx.translateBy(x: -canvas.minX, y: CGFloat(ch) + canvas.minY)
         ctx.scaleBy(x: 1, y: -1)
+        if whiteFill {
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fill(canvas)
+        }
 
         let previous = NSGraphicsContext.current
         NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: true)

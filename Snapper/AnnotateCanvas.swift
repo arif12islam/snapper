@@ -155,10 +155,23 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     /// The picture plus anything drawn outside it: the frame grows to hold annotations that go past the edge.
     private var objectsExtent: CGRect {
+        guard extendCanvas else { return CGRect(origin: .zero, size: imageSize) }
         var all = objects
         if let w = working { all.append(w) }
         return AnnotationRenderer.canvasRect(imageSize: imageSize, objects: all)
     }
+
+    /// Off by default: annotations stay inside the picture. When on, the frame (and the export) grows to hold them.
+    var extendCanvas = false {
+        didSet {
+            guard extendCanvas != oldValue else { return }
+            fitView()
+            onChange?()
+        }
+    }
+
+    /// Colour of the added area: transparent (checkerboard) or white.
+    var extendFillWhite = false { didSet { needsDisplay = true } }
 
     /// Layout is held still while the mouse is down, so the view does not rescale under the pointer mid-drag.
     private var frozenContent: CGRect?
@@ -289,9 +302,13 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         return CGPoint(x: f.minX + p.x * s, y: f.minY + p.y * s)
     }
 
-    /// The canvas is free: annotations can be drawn, moved and resized anywhere. Without a crop the frame (and the
-    /// export, background included) grows to hold them; with a crop, whatever lies outside is cut off.
-    private func clampToImage(_ p: CGPoint) -> CGPoint { p }
+    /// With Extend Canvas on (and no crop) annotations can go anywhere and the frame grows to hold them; otherwise
+    /// they stay inside the picture.
+    private func clampToImage(_ p: CGPoint) -> CGPoint {
+        guard cropRect != nil || !extendCanvas else { return p }
+        let c = contentRect
+        return CGPoint(x: min(max(p.x, c.minX), c.maxX), y: min(max(p.y, c.minY), c.maxY))
+    }
 
     // MARK: - Live zoom / pan snapshot
 
@@ -403,7 +420,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     func exportImage() -> CGImage? {
         commitTextEditing()
-        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect, expand: true)
+        return AnnotationRenderer.exportImage(base: baseImage, objects: objects, cropRect: cropRect, expand: extendCanvas, whiteFill: extendFillWhite)
     }
 
     /// Exactly what the canvas shows: annotations, crop, Auto Balance and background.
@@ -1462,7 +1479,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                 ctx.saveGState()
                 ctx.addPath(clipPath)
                 ctx.clip()
-                drawChecker(ctx, in: cv)
+                drawChecker(ctx, in: cv, white: extendFillWhite)
                 ctx.restoreGState()
             }
         } else {
@@ -1473,7 +1490,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             ctx.setFillColor(NSColor.white.cgColor)
             ctx.fill(canvasView)
             ctx.restoreGState()
-            if contentRect != CGRect(origin: .zero, size: imageSize) { drawChecker(ctx, in: canvasView) }
+            if contentRect != CGRect(origin: .zero, size: imageSize) { drawChecker(ctx, in: canvasView, white: extendFillWhite) }
         }
 
         ctx.saveGState()
@@ -1517,7 +1534,14 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     }
 
     /// Transparent-looking backdrop for the part of the canvas that has no picture.
-    private func drawChecker(_ ctx: CGContext, in rect: CGRect) {
+    private func drawChecker(_ ctx: CGContext, in rect: CGRect, white: Bool) {
+        if white {
+            ctx.saveGState()
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fill(rect)
+            ctx.restoreGState()
+            return
+        }
         let r = rect.intersection(bounds.insetBy(dx: -20, dy: -20))
         guard !r.isNull else { return }
         let t: CGFloat = 10
