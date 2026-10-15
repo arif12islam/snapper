@@ -9,6 +9,8 @@ NAME="Snapper Local Signing"
 DIR="$HOME/.snapper-signing"
 P12="$DIR/snapper-signing.p12"
 PASS="snapper-signing"
+# macOS ships LibreSSL, whose PKCS12 files the keychain can import. Homebrew OpenSSL 3 writes a newer format it rejects.
+OPENSSL=/usr/bin/openssl
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 have_identity() { security find-identity -p codesigning 2>/dev/null | grep -q "$NAME"; }
@@ -33,8 +35,8 @@ basicConstraints = critical,CA:false
 keyUsage = critical,digitalSignature
 extendedKeyUsage = critical,codeSigning
 CNF
-  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout "$DIR/key.pem" -out "$DIR/cert.pem" -config "$DIR/cert.cnf" 2>/dev/null
-  openssl pkcs12 -export -inkey "$DIR/key.pem" -in "$DIR/cert.pem" -out "$P12" -passout "pass:$PASS" 2>/dev/null
+  "$OPENSSL" req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout "$DIR/key.pem" -out "$DIR/cert.pem" -config "$DIR/cert.cnf" 2>/dev/null
+  "$OPENSSL" pkcs12 -export -inkey "$DIR/key.pem" -in "$DIR/cert.pem" -out "$P12" -passout "pass:$PASS" 2>/dev/null
   security import "$P12" -k "$KEYCHAIN" -P "$PASS" -T /usr/bin/codesign >/dev/null
   echo "Trusting the certificate for code signing (macOS may ask for your password)..."
   security add-trusted-cert -p codeSign -k "$KEYCHAIN" "$DIR/cert.pem" || true
