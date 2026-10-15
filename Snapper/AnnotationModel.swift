@@ -175,6 +175,16 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
     /// The rectangle whose corner and edge handles resize the object.
     var editRect: CGRect { kind == .magnifier ? magSourceRect : rect }
 
+    /// Rect-like kinds can be resized from their corners.
+    var isBoxShaped: Bool {
+        switch kind {
+        case .rectangle, .ellipse, .pixelate, .blur, .spotlight, .image: return true
+        default: return false
+        }
+    }
+
+    var highlighterWidth: CGFloat { thickness > 0 ? thickness : max(style.lineWidth * 4, 12) }
+
     /// Middle handle of an arrow: where it was dragged to, the middle of the line, or (old Curved style) a default bend.
     var curveControl: CGPoint {
         if let c = points.first { return c }
