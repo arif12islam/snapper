@@ -162,16 +162,22 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     }
 
     /// Off by default: annotations stay inside the picture. When on, the frame (and the export) grows to hold them.
-    var extendCanvas = false {
+    var extendCanvas = UserDefaults.standard.bool(forKey: "extendCanvas") {
         didSet {
             guard extendCanvas != oldValue else { return }
+            UserDefaults.standard.set(extendCanvas, forKey: "extendCanvas")
             fitView()
             onChange?()
         }
     }
 
     /// Colour of the added area: transparent (checkerboard) or white.
-    var extendFillWhite = false { didSet { needsDisplay = true } }
+    var extendFillWhite = UserDefaults.standard.bool(forKey: "extendFillWhite") {
+        didSet {
+            UserDefaults.standard.set(extendFillWhite, forKey: "extendFillWhite")
+            needsDisplay = true
+        }
+    }
 
     /// Layout is held still while the mouse is down, so the view does not rescale under the pointer mid-drag.
     private var frozenContent: CGRect?

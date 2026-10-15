@@ -19,9 +19,9 @@ enum ShapeRecognizer {
         guard pathLength > 0 else { return nil }
         let gap = hypot(first.x - last.x, first.y - last.y)
 
-        if gap < pathLength * 0.25 {
+        if gap < pathLength * 0.3 {
             // Closed stroke: rectangle first (corners are unmistakable), then ellipse.
-            if let r = rectangle(raw, box: box, diag: diag) { return .rectangle(r) }
+            if let r = rectangle(raw, box: box, diag: diag) ?? rectangleFit(raw, box: box) { return .rectangle(r) }
             if let e = ellipse(raw, box: box) { return .ellipse(e) }
             return nil
         }
@@ -81,6 +81,24 @@ enum ShapeRecognizer {
         return r
     }
 
+    /// A rectangle drawn from the middle of a side has extra vertices, so also accept a stroke that simply hugs the
+    /// edges of its bounding box and reaches all four corners.
+    private static func rectangleFit(_ raw: [CGPoint], box: CGRect) -> CGRect? {
+        let m = min(box.width, box.height)
+        guard m > 20 else { return nil }
+        func edgeDistance(_ p: CGPoint) -> CGFloat {
+            min(abs(p.x - box.minX), abs(p.x - box.maxX), abs(p.y - box.minY), abs(p.y - box.maxY))
+        }
+        let sorted = raw.map(edgeDistance).sorted()
+        guard sorted[Int(Double(sorted.count - 1) * 0.9)] <= 0.09 * m else { return nil }
+        let corners = [CGPoint(x: box.minX, y: box.minY), CGPoint(x: box.maxX, y: box.minY),
+                       CGPoint(x: box.maxX, y: box.maxY), CGPoint(x: box.minX, y: box.maxY)]
+        for c in corners {
+            guard let nearest = raw.map({ dist($0, c) }).min(), nearest <= 0.22 * m else { return nil }
+        }
+        return box
+    }
+
     private static func ellipse(_ raw: [CGPoint], box: CGRect) -> CGRect? {
         guard box.width > 24, box.height > 24 else { return nil }
         let aspect = box.width / box.height
@@ -99,7 +117,7 @@ enum ShapeRecognizer {
         let n = CGFloat(raw.count)
         let mean = sum / n
         let variance = max(sumSq / n - mean * mean, 0)
-        guard quadrants.count == 4, abs(mean - 1) < 0.2, sqrt(variance) < 0.18 else { return nil }
+        guard quadrants.count == 4, abs(mean - 1) < 0.25, sqrt(variance) < 0.22 else { return nil }
         return box
     }
 
