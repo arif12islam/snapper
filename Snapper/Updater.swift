@@ -69,7 +69,8 @@ enum Updater {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 throw NSError(domain: "Updater", code: http.statusCode,
-                              userInfo: [NSLocalizedDescriptionKey: "The update server answered \(http.statusCode)."])
+                              userInfo: [NSLocalizedDescriptionKey: http.statusCode == 404
+                                ? "No release published yet." : "The update server answered \(http.statusCode)."])
             }
             guard let release = parse(data) else {
                 throw NSError(domain: "Updater", code: 1,
