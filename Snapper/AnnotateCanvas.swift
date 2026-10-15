@@ -78,6 +78,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     private enum Handle: Equatable { case corner(Int), edge(Int), rotate, start, end, control, tip }
     private var activeHandle: Handle?
+    private var lastSmart: (id: UUID, time: Date)?
+    private var interacting = false              // a drawing tool is active but the drag moves an existing object
+    private var hoverCursor: NSCursor?
     private var handleAnchor: CGPoint = .zero
 
     private enum CropDrag { case new, corner(CGPoint), move(CGPoint) }
@@ -287,7 +290,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     /// settles (about 0.14 s after the last event), which keeps pinch and scroll smooth with backgrounds and shadows.
     private func beginLive() {
         if live == nil {
-            let scale = window?.backingScaleFactor ?? 2
+            // Large windows get a lighter snapshot while the gesture runs; it is redrawn crisp right after.
+            let backing = window?.backingScaleFactor ?? 2
+            let scale: CGFloat = bounds.width * bounds.height * backing * backing > 4_500_000 ? max(1, backing * 0.6) : backing
             let w = Int(bounds.width * scale), h = Int(bounds.height * scale)
             guard w > 0, h > 0,
                   let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
@@ -308,7 +313,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         liveWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.endLive() }
         liveWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09, execute: work)
     }
 
     private func endLive() {
@@ -655,7 +660,12 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         case .callout:
             return [(.tip, o.end)]
         case .magnifier:
-            return [(.end, o.end), (.control, o.magLoupeCenter)]
+            let r = o.magSourceRect
+            return [(.corner(0), CGPoint(x: r.minX, y: r.minY)), (.corner(1), CGPoint(x: r.maxX, y: r.minY)),
+                    (.corner(2), CGPoint(x: r.maxX, y: r.maxY)), (.corner(3), CGPoint(x: r.minX, y: r.maxY)),
+                    (.edge(0), CGPoint(x: r.midX, y: r.minY)), (.edge(1), CGPoint(x: r.maxX, y: r.midY)),
+                    (.edge(2), CGPoint(x: r.midX, y: r.maxY)), (.edge(3), CGPoint(x: r.minX, y: r.midY)),
+                    (.control, o.magLoupeCenter)]
         default:
             var list: [(Handle, CGPoint)] = []
             let r = o.rect
@@ -667,7 +677,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                              (.edge(2), CGPoint(x: r.midX, y: r.maxY)), (.edge(3), CGPoint(x: r.minX, y: r.midY))]
                 }
             }
-            if o.kind == .rectangle || o.kind == .ellipse || o.kind == .image || o.kind == .text {
+            if o.kind == .rectangle || o.kind == .ellipse || o.kind == .image || o.kind == .text || o.kind == .pencil {
                 // Rotate handle above the box; it turns with the object.
                 let reach = r.height / 2 + 28 / max(fitScale, 0.05)
                 let a = o.rotation * .pi / 180
@@ -698,7 +708,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             if constrain { deg = (deg / 15).rounded() * 15 }
             o.rotation = Self.normalized(deg)
         case .edge(let side):
-            let r = o.rect
+            let r = o.editRect
             var minX = r.minX, maxX = r.maxX, minY = r.minY, maxY = r.maxY
             switch side {
             case 0: minY = p.y
@@ -713,7 +723,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             let a = handleAnchor
             if o.kind == .image || constrain {
                 // Keep the proportions (always for pictures, with Shift for shapes).
-                let r = objects[i].rect
+                let r = objects[i].editRect
                 let aspect = max(r.width, 1) / max(r.height, 1)
                 let dx = q.x - a.x, dy = q.y - a.y
                 let w = max(abs(dx), abs(dy) * aspect)
@@ -729,7 +739,88 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
     override func resetCursorRects() {
         let c = viewRect(contentRect).intersection(bounds)
-        addCursorRect(c, cursor: tool == .select ? .arrow : (tool == .text ? .iBeam : .crosshair))
+        addCursorRect(c, cursor: hoverCursor ?? (tool == .select ? .arrow : (tool == .text ? .iBeam : .crosshair)))
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for a in trackingAreas { removeTrackingArea(a) }
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                                       owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        updateHover(event)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        setHoverCursor(nil)
+    }
+
+    /// Pointer over an object: open hand (it can be dragged). Over a handle of the selection: pointing hand.
+    private func updateHover(_ event: NSEvent) {
+        guard tool != .crop, event.type != .leftMouseDragged else { setHoverCursor(nil); return }
+        let raw = toImage(convert(event.locationInWindow, from: nil))
+        let optionHeld = event.modifierFlags.contains(.option)
+        let canGrab = tool == .select || (tool != .pencil && tool != .highlighter && !optionHeld)
+        var c: NSCursor?
+        if canGrab {
+            if handleHit(at: raw) != nil {
+                c = .pointingHand
+            } else if hitObject(at: clampToImage(raw)) != nil {
+                c = .openHand
+            }
+        }
+        setHoverCursor(c)
+    }
+
+    private func setHoverCursor(_ c: NSCursor?) {
+        guard c !== hoverCursor else { return }
+        hoverCursor = c
+        window?.invalidateCursorRects(for: self)
+    }
+
+    /// Tools that still let you grab objects: hover turns the pointer into a hand and a drag moves what is under it.
+    /// Hold Option to draw over an existing object instead.
+    private func canInteract(_ event: NSEvent) -> Bool {
+        tool != .select && tool != .crop && tool != .pencil && tool != .highlighter
+            && !event.modifierFlags.contains(.option)
+    }
+
+    /// Select tool behaviour: grab a handle of the selected object, or select and start moving the object under
+    /// the pointer. Returns true when something was grabbed.
+    private func selectInteraction(_ event: NSEvent, raw: CGPoint, p: CGPoint) -> Bool {
+        if let h = handleHit(at: raw), let o = selectedObject {
+            if h == .control, o.kind == .arrow, event.clickCount == 2 {
+                // Double-click the middle handle to straighten the arrow.
+                pushUndo()
+                if let i = objects.firstIndex(where: { $0.id == o.id }) { objects[i].points = [] }
+                onChange?()
+                needsDisplay = true
+                return true
+            }
+            activeHandle = h
+            didPushMoveUndo = false
+            if case .corner(let i) = h {
+                let r = o.editRect
+                let corners = [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
+                               CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.maxY)]
+                handleAnchor = corners[(i + 2) % 4]
+            }
+            return true
+        }
+        let hit = hitObject(at: p)
+        selectedID = hit?.id
+        if let hit {
+            movingLast = p
+            didPushMoveUndo = false
+            onSelectionStyle?(hit.style)
+            NSCursor.closedHand.set()
+            if (hit.kind == .text || hit.kind == .callout), event.clickCount == 2 { beginTextEditing(id: hit.id) }
+        }
+        notifySelection()
+        needsDisplay = true
+        return hit != nil
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -741,37 +832,22 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         dragStart = p
         activeHandle = nil
 
-        switch effectiveTool {
-        case .select:
-            if let h = handleHit(at: raw), let o = selectedObject {
-                if h == .control, o.kind == .arrow, event.clickCount == 2 {
-                    // Double-click the middle handle to straighten the arrow.
-                    pushUndo()
-                    if let i = objects.firstIndex(where: { $0.id == o.id }) { objects[i].points = [] }
-                    onChange?()
-                    needsDisplay = true
-                    return
-                }
-                activeHandle = h
-                didPushMoveUndo = false
-                if case .corner(let i) = h {
-                    let r = o.rect
-                    let corners = [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
-                                   CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.maxY)]
-                    handleAnchor = corners[(i + 2) % 4]
-                }
-                return
-            }
-            let hit = hitObject(at: p)
-            selectedID = hit?.id
-            if let hit {
-                movingLast = p
-                didPushMoveUndo = false
-                onSelectionStyle?(hit.style)
-                if (hit.kind == .text || hit.kind == .callout), event.clickCount == 2 { beginTextEditing(id: hit.id) }
-            }
+        interacting = false
+        if canInteract(event), selectInteraction(event, raw: raw, p: p) {
+            // A drawing tool is active, but the click landed on an existing object (or one of its handles).
+            interacting = true
+            return
+        }
+
+        if tool != .select, tool != .crop, selectedID != nil {
+            selectedID = nil
             notifySelection()
             needsDisplay = true
+        }
+
+        switch effectiveTool {
+        case .select:
+            _ = selectInteraction(event, raw: raw, p: p)
 
         case .crop:
             beginCropDrag(at: raw)
@@ -821,7 +897,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             dirty.append(o.rect)
             pad = max(pad, o.kind == .highlighter ? o.highlighterWidth : o.style.lineWidth * 3)
         }
-        switch effectiveTool {
+        switch interacting ? AnnotationTool.select : effectiveTool {
         case .select:
             note(selectedObject)
             if let h = activeHandle {
@@ -866,13 +942,17 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     }
 
     override func mouseUp(with event: NSEvent) {
-        defer { dragStart = nil; movingLast = nil; activeHandle = nil; needsDisplay = true }
+        defer {
+            dragStart = nil; movingLast = nil; activeHandle = nil; interacting = false; needsDisplay = true
+            if hoverCursor != nil || tool == .select { NSCursor.openHand.set() }
+            updateHover(event)
+        }
 
         if tool == .crop {
             endCropDrag()
             return
         }
-        if tool == .select, activeHandle != nil {
+        if (tool == .select || interacting), activeHandle != nil {
             onChange?()
             return
         }
@@ -890,9 +970,13 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             beginTextEditing(id: w.id)
             return
         }
-        if w.kind == .magnifier, w.magSourceRadius < 10 {
-            w.end = CGPoint(x: w.start.x + 36, y: w.start.y)     // a plain click makes a default-sized loupe
+        if w.kind == .magnifier, abs(w.end.x - w.start.x) < 14 || abs(w.end.y - w.start.y) < 14 {
+            // A plain click makes a default-sized loupe around the point.
+            let c = w.start
+            w.start = CGPoint(x: c.x - 44, y: c.y - 30)
+            w.end = CGPoint(x: c.x + 44, y: c.y + 30)
         }
+        if w.kind == .pencil, w.style.smartShapes, absorbArrowHead(w) { return }
         if w.kind == .pencil, w.style.smartShapes, let shape = ShapeRecognizer.recognize(w.points) {
             // Keep the drawing as one undo step and the clean shape as the next, so undo can bring it back.
             var drawn = w
@@ -919,7 +1003,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             pushUndo()
             if let i = objects.firstIndex(where: { $0.id == drawn.id }) { objects[i] = made } else { objects.append(made) }
             nextZ += 1
-            selectedID = nil
+            selectedID = made.id
+            lastSmart = (made.id, Date())
+            notifySelection()
             Toast.show("Snapped to \(name). Undo keeps your drawing")
             return
         }
@@ -935,13 +1021,35 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         pushUndo()
         objects.append(w)
         nextZ += 1
-        selectedID = nil
+        // Keep the new object selected so its box, handles and rotate control are right there.
+        selectedID = w.isFreehand ? nil : w.id
+        notifySelection()
+    }
+
+    /// Drawing the head of an arrow with the pen: a short stroke at the end of a line just made turns it into an arrow.
+    private func absorbArrowHead(_ w: AnnotationObject) -> Bool {
+        guard let last = lastSmart, Date().timeIntervalSince(last.time) < 3,
+              let i = objects.firstIndex(where: { $0.id == last.id }),
+              objects[i].kind == .line || objects[i].kind == .arrow else { return false }
+        var o = objects[i]
+        guard let tip = ShapeRecognizer.arrowHeadEnd(stroke: w.points, lineStart: o.start, lineEnd: o.end) else { return false }
+        if o.kind == .line {
+            pushUndo()
+            if tip == o.start { o.start = o.end; o.end = tip }
+            o.kind = .arrow
+            objects[i] = o
+            selectedID = o.id
+            notifySelection()
+        }
+        lastSmart = (o.id, Date())    // a second barb is absorbed too
+        needsDisplay = true
+        return true
     }
 
     private func constrained(from s: CGPoint, to p: CGPoint, kind: AnnotationKind) -> CGPoint {
         let dx = p.x - s.x, dy = p.y - s.y
         switch kind {
-        case .rectangle, .ellipse, .pixelate, .blur, .spotlight:
+        case .rectangle, .ellipse, .pixelate, .blur, .spotlight, .magnifier:
             let m = max(abs(dx), abs(dy))
             return CGPoint(x: s.x + (dx < 0 ? -m : m), y: s.y + (dy < 0 ? -m : m))
         default:
@@ -1094,7 +1202,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     // MARK: - Zoom and pan gestures
 
     override func magnify(with event: NSEvent) {
-        setZoom(zoom * (1 + event.magnification), anchor: convert(event.locationInWindow, from: nil), live: true)
+        setZoom(zoom * (1 + event.magnification * 1.2), anchor: convert(event.locationInWindow, from: nil), live: true)
     }
 
     override func smartMagnify(with event: NSEvent) {
@@ -1102,8 +1210,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option) {
-            let factor = exp(event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 0.01 : 0.05))
+        // A mouse wheel zooms around the pointer; two-finger scrolling pans (pinch, or hold ⌘ / ⌥, to zoom).
+        if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option) || !event.hasPreciseScrollingDeltas {
+            let factor = exp(event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 0.016 : 0.09))
             setZoom(zoom * factor, anchor: convert(event.locationInWindow, from: nil), live: true)
         } else {
             commitTextEditing()
@@ -1254,8 +1363,25 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         }
 
         // Handles in view space, so they stay the same size at any zoom.
-        if tool == .select, let obj = selectedObject, obj.id != hiddenText {
-            for (_, p) in handles(for: obj) { drawHandle(at: toView(p), in: ctx) }
+        if tool != .crop, let obj = selectedObject, obj.id != hiddenText {
+            for (h, p) in handles(for: obj) {
+                if h == .rotate {
+                    // Tether from the top of the box to the rotate handle.
+                    let r = obj.rect
+                    let a = obj.rotation * .pi / 180
+                    let half = r.height / 2
+                    let top = CGPoint(x: r.midX + half * sin(a), y: r.midY - half * cos(a))
+                    let t = toView(top), v = toView(p)
+                    ctx.saveGState()
+                    ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
+                    ctx.setLineWidth(1.5)
+                    ctx.move(to: t)
+                    ctx.addLine(to: v)
+                    ctx.strokePath()
+                    ctx.restoreGState()
+                }
+                drawHandle(at: toView(p), in: ctx)
+            }
             if activeHandle == .rotate, let rp = handles(for: obj).first(where: { $0.0 == .rotate })?.1 {
                 drawPill("\(Int(obj.rotation.rounded()))°", near: toView(rp))
             }
@@ -1324,11 +1450,20 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
 
         // Selection outline
         if let obj = selectedObject, obj.id != hiddenText {
-            let r = obj.rect.insetBy(dx: -6 / s, dy: -6 / s)
+            let base = obj.rect
+            let r = base.insetBy(dx: -6 / s, dy: -6 / s)
+            ctx.saveGState()
+            if obj.rotation != 0, obj.supportsRotation {
+                // The box turns with the object.
+                ctx.translateBy(x: base.midX, y: base.midY)
+                ctx.rotate(by: obj.rotation * .pi / 180)
+                ctx.translateBy(x: -base.midX, y: -base.midY)
+            }
             ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
             ctx.setLineWidth(1.5 / s)
             ctx.setLineDash(phase: 0, lengths: [5 / s, 4 / s])
             ctx.stroke(r)
+            ctx.restoreGState()
         }
         ctx.restoreGState()
     }

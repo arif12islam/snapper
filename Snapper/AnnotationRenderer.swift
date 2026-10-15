@@ -422,40 +422,46 @@ enum AnnotationRenderer {
     // MARK: - Magnifier
 
     private static func drawMagnifier(_ object: AnnotationObject, in ctx: CGContext, base: CGImage) {
-        let c = object.start, r = object.magSourceRadius
-        let L = object.magLoupeCenter, R = object.magLoupeRadius
+        let S = object.magSourceRect, Lr = object.magLoupeRect
+        let c = CGPoint(x: S.midX, y: S.midY), L = CGPoint(x: Lr.midX, y: Lr.midY)
         let color = object.style.color
         let lw = max(2, object.style.lineWidth * 0.7)
         let dx = L.x - c.x, dy = L.y - c.y
         let dist = max(hypot(dx, dy), 0.001)
         let dir = CGPoint(x: dx / dist, y: dy / dist)
 
+        // Distance from an ellipse's centre to its edge along `dir`.
+        func reach(_ r: CGRect) -> CGFloat {
+            let a = max(r.width / 2, 1), b = max(r.height / 2, 1)
+            return 1 / sqrt((dir.x / a) * (dir.x / a) + (dir.y / b) * (dir.y / b))
+        }
+        let rs = reach(S), rl = reach(Lr)
+
         // Link between the area and its loupe (only while they are apart).
-        if dist > r + R + 2 {
+        if dist > rs + rl + 2 {
             ctx.setStrokeColor(color.withAlphaComponent(0.85).cgColor)
             ctx.setLineWidth(lw * 0.7)
-            ctx.move(to: CGPoint(x: c.x + dir.x * r, y: c.y + dir.y * r))
-            ctx.addLine(to: CGPoint(x: L.x - dir.x * R, y: L.y - dir.y * R))
+            ctx.move(to: CGPoint(x: c.x + dir.x * rs, y: c.y + dir.y * rs))
+            ctx.addLine(to: CGPoint(x: L.x - dir.x * rl, y: L.y - dir.y * rl))
             ctx.strokePath()
         }
 
         // Ring around the area being enlarged.
         ctx.setStrokeColor(color.cgColor)
         ctx.setLineWidth(lw * 0.8)
-        ctx.strokeEllipse(in: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
+        ctx.strokeEllipse(in: S)
 
-        // Loupe: shadow, the enlarged picture clipped to a circle, then a ring.
-        let loupe = CGRect(x: L.x - R, y: L.y - R, width: R * 2, height: R * 2)
+        // Loupe: shadow, the enlarged picture clipped to the oval, then a ring.
         ctx.saveGState()
         ctx.setShadow(offset: CGSize(width: 0, height: 3), blur: 10, color: NSColor.black.withAlphaComponent(0.35).cgColor)
         ctx.setFillColor(NSColor.white.cgColor)
-        ctx.fillEllipse(in: loupe)
+        ctx.fillEllipse(in: Lr)
         ctx.restoreGState()
 
         ctx.saveGState()
-        ctx.addEllipse(in: loupe)
+        ctx.addEllipse(in: Lr)
         ctx.clip()
-        let z = R / r
+        let z = max(object.style.magnify, 1.2)
         ctx.translateBy(x: L.x, y: L.y)
         ctx.scaleBy(x: z, y: z)
         ctx.translateBy(x: -c.x, y: -c.y)
@@ -465,7 +471,7 @@ enum AnnotationRenderer {
 
         ctx.setStrokeColor(color.cgColor)
         ctx.setLineWidth(lw)
-        ctx.strokeEllipse(in: loupe)
+        ctx.strokeEllipse(in: Lr)
     }
 
     // MARK: - Arrows

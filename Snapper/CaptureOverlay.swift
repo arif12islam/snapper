@@ -438,7 +438,7 @@ private final class SelectionView: NSView {
     private let magContainer = CALayer()
     private let magImage = CALayer()
     private let reticle = CALayer()
-    private let zoom: CGFloat = 5
+    private let zoom: CGFloat = 6
 
     private func setUpLayers(freeze: Bool) {
         wantsLayer = true
@@ -476,8 +476,8 @@ private final class SelectionView: NSView {
         for l in [borderOuter, border, handlesLayer] { root.addSublayer(l) }
 
         magContainer.masksToBounds = true
-        magContainer.cornerRadius = 8
-        magContainer.cornerCurve = .continuous
+        magContainer.cornerRadius = 60       // round loupe
+        magContainer.shadowOpacity = 0
         magContainer.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
         magContainer.borderWidth = 1.5
         magContainer.backgroundColor = NSColor.black.cgColor
@@ -488,6 +488,7 @@ private final class SelectionView: NSView {
         magContainer.addSublayer(magImage)
         reticle.borderColor = NSColor.systemRed.cgColor
         reticle.borderWidth = 1
+        reticle.cornerRadius = 2.5
         magContainer.addSublayer(reticle)
         root.addSublayer(magContainer)
 
@@ -523,8 +524,10 @@ private final class SelectionView: NSView {
         if showCrosshair, let mp = mousePoint, choosing {
             crossH.isHidden = false
             crossV.isHidden = false
-            crossH.frame = CGRect(x: 0, y: mp.y.rounded() - 0.5, width: bounds.width, height: 1)
-            crossV.frame = CGRect(x: mp.x.rounded() - 0.5, y: 0, width: 1, height: bounds.height)
+            // Short ticks around the pointer instead of lines across the whole screen.
+            let arm: CGFloat = 13
+            crossH.frame = CGRect(x: mp.x.rounded() - arm, y: mp.y.rounded() - 0.5, width: arm * 2, height: 1)
+            crossV.frame = CGRect(x: mp.x.rounded() - 0.5, y: mp.y.rounded() - arm, width: 1, height: arm * 2)
         } else {
             crossH.isHidden = true
             crossV.isHidden = true
@@ -567,8 +570,8 @@ private final class SelectionView: NSView {
 
         // Magnifier
         if showMagnifier, let mp = mousePoint, choosing {
-            let size = CGSize(width: 124, height: 84)
-            var origin = CGPoint(x: mp.x + 20, y: mp.y - 20 - size.height)
+            let size = CGSize(width: 120, height: 120)
+            var origin = CGPoint(x: mp.x + 26, y: mp.y - 26 - size.height)
             origin.x = min(max(origin.x, 8), bounds.width - size.width - 8)
             origin.y = min(max(origin.y, 34), bounds.height - size.height - 8)
             magContainer.frame = CGRect(origin: origin, size: size)

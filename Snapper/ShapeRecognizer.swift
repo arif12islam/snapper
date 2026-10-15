@@ -19,7 +19,7 @@ enum ShapeRecognizer {
         guard pathLength > 0 else { return nil }
         let gap = hypot(first.x - last.x, first.y - last.y)
 
-        if gap < pathLength * 0.18 {
+        if gap < pathLength * 0.25 {
             // Closed stroke: rectangle first (corners are unmistakable), then ellipse.
             if let r = rectangle(raw, box: box, diag: diag) { return .rectangle(r) }
             if let e = ellipse(raw, box: box) { return .ellipse(e) }
@@ -30,7 +30,7 @@ enum ShapeRecognizer {
         if gap >= 40 {
             var deviation: CGFloat = 0
             for p in raw { deviation = max(deviation, AnnotationObject.distance(from: p, toSegment: first, last)) }
-            if deviation <= gap * 0.06 { return .line(first, last) }
+            if deviation <= gap * 0.08 { return .line(first, last) }
         }
         if let a = arrow(raw, diag: diag) { return .arrow(a.0, a.1) }
         return nil
@@ -71,10 +71,10 @@ enum ShapeRecognizer {
             let lu = hypot(u.x, u.y), lw = hypot(w.x, w.y)
             guard lu > 12, lw > 12 else { return nil }
             let cosine = (u.x * w.x + u.y * w.y) / (lu * lw)
-            guard abs(cosine) < 0.36 else { return nil }                        // roughly 70 to 110 degrees
+            guard abs(cosine) < 0.45 else { return nil }                        // roughly 63 to 117 degrees
             // Sides must be close to horizontal or vertical.
             let tilt = abs(atan2(abs(u.y), abs(u.x)))                           // 0 horizontal, pi/2 vertical
-            guard tilt < 0.30 || tilt > (.pi / 2 - 0.30) else { return nil }
+            guard tilt < 0.38 || tilt > (.pi / 2 - 0.38) else { return nil }
         }
         let r = bounds(v)
         guard r.width > 20, r.height > 20 else { return nil }
@@ -99,8 +99,25 @@ enum ShapeRecognizer {
         let n = CGFloat(raw.count)
         let mean = sum / n
         let variance = max(sumSq / n - mean * mean, 0)
-        guard quadrants.count == 4, abs(mean - 1) < 0.12, sqrt(variance) < 0.12 else { return nil }
+        guard quadrants.count == 4, abs(mean - 1) < 0.2, sqrt(variance) < 0.18 else { return nil }
         return box
+    }
+
+    /// A short stroke drawn at the end of a straight line (one barb of an arrow head, or a V) turns that line into an
+    /// arrow. Returns the end of the line that should become the tip, or nil when the stroke is not a head.
+    static func arrowHeadEnd(stroke: [CGPoint], lineStart: CGPoint, lineEnd: CGPoint) -> CGPoint? {
+        guard stroke.count >= 3 else { return nil }
+        let shaft = dist(lineStart, lineEnd)
+        guard shaft >= 40 else { return nil }
+        let len = length(stroke)
+        let box = bounds(stroke)
+        guard len > 8, len < shaft * 0.7, hypot(box.width, box.height) < shaft * 0.6 else { return nil }
+        let nearEnd = stroke.map { dist($0, lineEnd) }.min() ?? .infinity
+        let nearStart = stroke.map { dist($0, lineStart) }.min() ?? .infinity
+        let limit = shaft * 0.22
+        if nearEnd <= limit, nearEnd <= nearStart { return lineEnd }
+        if nearStart <= limit { return lineStart }
+        return nil
     }
 
     // MARK: Helpers

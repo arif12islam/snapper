@@ -151,25 +151,29 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
     /// An arrow is curved once its middle handle has been moved (or when it came from the old Curved style).
     var isCurvedArrow: Bool { kind == .arrow && (!points.isEmpty || style.arrowStyle == 4) }
 
-    // Magnifier: `start` is the centre of the area being enlarged, `end` a point on its edge, and `points[0]`
-    // the centre of the loupe (a default spot beside the area until it is moved).
-    var magSourceRadius: CGFloat { max(hypot(end.x - start.x, end.y - start.y), 6) }
-    var magLoupeRadius: CGFloat { magSourceRadius * max(style.magnify, 1.2) }
+    // Magnifier: start/end are corners of the area being enlarged (any width and height), `points[0]` is the
+    // centre of the loupe (a default spot beside the area until it is moved). The loupe is the area scaled by `magnify`.
+    var magSourceRect: CGRect {
+        CGRect(x: min(start.x, end.x), y: min(start.y, end.y),
+               width: max(abs(end.x - start.x), 8), height: max(abs(end.y - start.y), 8))
+    }
+    var magLoupeSize: CGSize {
+        let r = magSourceRect, z = max(style.magnify, 1.2)
+        return CGSize(width: r.width * z, height: r.height * z)
+    }
     var magLoupeCenter: CGPoint {
         if let c = points.first { return c }
-        let d = magSourceRadius + magLoupeRadius + 16
-        return CGPoint(x: start.x + d * 0.8, y: start.y - d * 0.6)
+        let s = magSourceRect, l = magLoupeSize
+        return CGPoint(x: s.midX + s.width / 2 + l.width / 2 + 16,
+                       y: s.midY - (s.height / 2 + l.height / 2 + 16) * 0.35)
+    }
+    var magLoupeRect: CGRect {
+        let l = magLoupeSize, c = magLoupeCenter
+        return CGRect(x: c.x - l.width / 2, y: c.y - l.height / 2, width: l.width, height: l.height)
     }
 
-    /// Rect-like kinds can be resized from their corners.
-    var isBoxShaped: Bool {
-        switch kind {
-        case .rectangle, .ellipse, .pixelate, .blur, .spotlight, .image: return true
-        default: return false
-        }
-    }
-
-    var highlighterWidth: CGFloat { thickness > 0 ? thickness : max(style.lineWidth * 4, 12) }
+    /// The rectangle whose corner and edge handles resize the object.
+    var editRect: CGRect { kind == .magnifier ? magSourceRect : rect }
 
     /// Middle handle of an arrow: where it was dragged to, the middle of the line, or (old Curved style) a default bend.
     var curveControl: CGPoint {
@@ -197,9 +201,7 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
             return CGRect(origin: start, size: size)
         }
         if kind == .magnifier {
-            let c = magLoupeCenter, r = magSourceRadius, R = magLoupeRadius
-            let a = CGRect(x: start.x - r, y: start.y - r, width: r * 2, height: r * 2)
-            return a.union(CGRect(x: c.x - R, y: c.y - R, width: R * 2, height: R * 2))
+            return magSourceRect.union(magLoupeRect)
         }
         if kind == .number {
             let d = AnnotationRenderer.numberDiameter(for: style)
@@ -280,9 +282,13 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
             return rect.insetBy(dx: -tolerance, dy: -tolerance).contains(p)
                 || hypot(p.x - end.x, p.y - end.y) <= tolerance * 1.5
         case .magnifier:
-            let c = magLoupeCenter
-            if hypot(p.x - c.x, p.y - c.y) <= magLoupeRadius + tolerance { return true }
-            return abs(hypot(p.x - start.x, p.y - start.y) - magSourceRadius) <= tolerance + style.lineWidth / 2
+            // Anywhere on the loupe, or on the ring around the enlarged area.
+            let l = magLoupeRect
+            let lx = (p.x - l.midX) / max(l.width / 2, 1), ly = (p.y - l.midY) / max(l.height / 2, 1)
+            if hypot(lx, ly) <= 1 + tolerance / max(min(l.width, l.height) / 2, 1) { return true }
+            let s = magSourceRect
+            let sx = (p.x - s.midX) / max(s.width / 2, 1), sy = (p.y - s.midY) / max(s.height / 2, 1)
+            return abs(hypot(sx, sy) - 1) * min(s.width, s.height) / 2 <= tolerance + style.lineWidth / 2
         }
     }
 

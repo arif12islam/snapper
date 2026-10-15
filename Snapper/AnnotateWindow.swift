@@ -62,6 +62,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private var backgroundPopover: BackgroundPopover?
     private let savePopup = NSPopUpButton(frame: .zero, pullsDown: true)
 
+    private let historyView = NSStackView()
     private weak var bottomUndo: NSButton?
     private weak var bottomRedo: NSButton?
     private let deleteButton = NSButton()
@@ -264,6 +265,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     private enum ToolbarID {
         static let background = NSToolbarItem.Identifier("snapper.background")
+        static let history = NSToolbarItem.Identifier("snapper.history")
         static let copy = NSToolbarItem.Identifier("snapper.copy")
         static let save = NSToolbarItem.Identifier("snapper.save")
         static func tools(_ i: Int) -> NSToolbarItem.Identifier { NSToolbarItem.Identifier("snapper.tools.\(i)") }
@@ -330,6 +332,15 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             toolSegments.append(seg)
         }
 
+        let undo = iconButton(symbol: "arrow.uturn.backward", tooltip: "Undo (⌘Z)", action: #selector(undoAction))
+        let redo = iconButton(symbol: "arrow.uturn.forward", tooltip: "Redo (⇧⌘Z)", action: #selector(redoAction))
+        bottomUndo = undo
+        bottomRedo = redo
+        historyView.orientation = .horizontal
+        historyView.spacing = 2
+        historyView.addArrangedSubview(undo)
+        historyView.addArrangedSubview(redo)
+
         backgroundButton.bezelStyle = .texturedRounded
         backgroundButton.title = "Background"
         backgroundButton.imagePosition = .imageLeading
@@ -355,7 +366,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     // MARK: NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        var ids: [NSToolbarItem.Identifier] = []
+        var ids: [NSToolbarItem.Identifier] = [ToolbarID.history]
         for i in 0..<Self.toolLayout.count { ids.append(ToolbarID.tools(i)) }
         ids += [.flexibleSpace, ToolbarID.background, ToolbarID.copy, ToolbarID.save]
         return ids
@@ -369,6 +380,9 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
                  willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         let item = NSToolbarItem(itemIdentifier: id)
         switch id {
+        case ToolbarID.history:
+            item.view = historyView
+            item.label = "Undo"
         case ToolbarID.background:
             item.view = backgroundButton
             item.label = "Background"
@@ -485,10 +499,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     }
 
     private func buildBottomBar() -> NSStackView {
-        let undo = iconButton(symbol: "arrow.uturn.backward", tooltip: "Undo (⌘Z)", action: #selector(undoAction))
-        let redo = iconButton(symbol: "arrow.uturn.forward", tooltip: "Redo (⇧⌘Z)", action: #selector(redoAction))
-        bottomUndo = undo
-        bottomRedo = redo
         iconButton(deleteButton, symbol: "trash", tooltip: "Delete selected (⌫)", action: #selector(deleteAction))
         let rotateLeft = iconButton(symbol: "rotate.left", tooltip: "Rotate picture left", action: #selector(rotateLeftAction))
         let rotateRight = iconButton(symbol: "rotate.right", tooltip: "Rotate picture right", action: #selector(rotateRightAction))
@@ -511,7 +521,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         zoomLabel.toolTip = "Pinch or ⌘-scroll to zoom, scroll to pan"
         zoomLabel.widthAnchor.constraint(equalToConstant: 44).isActive = true
 
-        let bar = row([undo, redo, deleteButton, divider(),
+        let bar = row([deleteButton, divider(),
                        rotateLeft, rotateRight, flipH, flipV, resize, divider(), addImage, divider(),
                        zoomOut, zoomLabel, zoomIn, fit], spacing: 4)
         bar.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
@@ -701,6 +711,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             hint = "Drag over what to emphasise; the rest dims"
         case .highlighter:
             hint = "Drag across text: the stroke fits the line height. Shift for a straight line"
+        case .arrow, .line, .rectangle:
+            hint = "Drag to draw. Click an object to move it; hold ⌥ to draw over it"
         case .magnifier:
             hint = "Drag over a detail. Drag the loupe by its middle handle to move it"
         case .number:
