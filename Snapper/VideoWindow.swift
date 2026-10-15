@@ -173,25 +173,36 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         rule.boxType = .separator
         rule.translatesAutoresizingMaskIntoConstraints = false
 
-        let root = NSStackView(views: [middle, rule, bar])
-        root.orientation = .vertical
-        root.spacing = 0
-        middle.translatesAutoresizingMaskIntoConstraints = false
-        bar.translatesAutoresizingMaskIntoConstraints = false
+        playerView.setContentHuggingPriority(.init(1), for: .horizontal)
+        playerView.setContentCompressionResistancePriority(.init(1), for: .horizontal)
+        playerView.setContentHuggingPriority(.init(1), for: .vertical)
+        playerView.setContentCompressionResistancePriority(.init(1), for: .vertical)
+
+        // Plain constraints rather than a vertical stack: the stack let the editor area collapse to a sliver.
+        let root = NSView()
+        for v in [middle, rule, bar] {
+            v.translatesAutoresizingMaskIntoConstraints = false
+            root.addSubview(v)
+        }
         window.contentView = root
         NSLayoutConstraint.activate([
+            middle.topAnchor.constraint(equalTo: root.topAnchor),
             middle.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             middle.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            middle.bottomAnchor.constraint(equalTo: rule.topAnchor),
             rule.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             rule.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            rule.heightAnchor.constraint(equalToConstant: 1),
+            rule.bottomAnchor.constraint(equalTo: bar.topAnchor),
+            bar.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            bar.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            bar.bottomAnchor.constraint(equalTo: root.bottomAnchor),
             playerView.topAnchor.constraint(equalTo: middle.topAnchor),
             playerView.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
             divider.topAnchor.constraint(equalTo: middle.topAnchor),
             divider.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
             sidebar.topAnchor.constraint(equalTo: middle.topAnchor),
-            sidebar.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
-            bar.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            bar.trailingAnchor.constraint(equalTo: root.trailingAnchor)
+            sidebar.bottomAnchor.constraint(equalTo: middle.bottomAnchor)
         ])
     }
 
