@@ -27,6 +27,7 @@ const S2 = Math.min(1420 / (APP_W + PAD * 2), 690 / (APP_H + PAD * 2)) * 0.96;
 const toScreen = (x: number, y: number, s = S1): [number, number] => [CX + (x - APP_W / 2) * s, CY + (y - APP_H / 2) * s];
 
 const RED = '#ff3b30';
+const PAPER = '#f4f3ef';
 const ease = Easing.bezier(0.45, 0, 0.2, 1);
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const ramp = (f: number, a: number, b: number) => interpolate(f, [a, b], [0, 1], { ...clamp, easing: ease });
@@ -44,17 +45,14 @@ const Wallpaper: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
   <div
     style={{
       position: 'absolute', inset: 0,
-      background:
-        'radial-gradient(60% 70% at 18% 20%, #4b3aa8 0%, rgba(75,58,168,0) 60%),' +
-        'radial-gradient(55% 60% at 85% 85%, #f07a52 0%, rgba(240,122,82,0) 60%),' +
-        'radial-gradient(50% 50% at 75% 15%, #b04f9a 0%, rgba(176,79,154,0) 60%),' +
-        'linear-gradient(160deg, #13133a 0%, #1b1b4d 45%, #3a1f4f 100%)',
+      background: NAVY,
       ...style,
     }}
   />
 );
 
-const FRAME_BG = 'linear-gradient(135deg, #3b2f7a 0%, #8c5aa8 38%, #ef8a63 72%, #f7c37a 100%)';
+const NAVY = '#1b1b4d';
+const FRAME_BG = NAVY;
 
 // ---------- Cursor ----------
 type Key = [number, number, number];
@@ -402,19 +400,19 @@ const EndCard: React.FC<{ f: number; fps: number }> = ({ f, fps }) => {
   const words = ['Capture.', 'Annotate.', 'Record.', 'Share.'];
   const pill = spring({ frame: d - 40, fps, config: { damping: 18, stiffness: 160 } });
   return (
-    <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+    <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column', background: PAPER, opacity: interpolate(d, [0, 10], [0, 1], clamp) }}>
       <Img
         src={staticFile('icon.png')}
-        style={{ width: 190, height: 190, transform: `scale(${icon}) rotate(${(1 - icon) * -12}deg)`, filter: 'drop-shadow(0 24px 40px rgba(0,0,0,0.45))' }}
+        style={{ width: 190, height: 190, transform: `scale(${icon}) rotate(${(1 - icon) * -12}deg)`, filter: 'drop-shadow(0 10px 18px rgba(27,27,77,0.18))' }}
       />
-      <div style={{ marginTop: 26, fontSize: 112, fontWeight: 800, color: '#fff', letterSpacing: -4, opacity: title, transform: `translateY(${(1 - title) * 30}px)` }}>
+      <div style={{ marginTop: 26, fontSize: 112, fontWeight: 800, color: NAVY, letterSpacing: -4, opacity: title, transform: `translateY(${(1 - title) * 30}px)` }}>
         Snapper
       </div>
       <div style={{ display: 'flex', gap: 18, marginTop: 6 }}>
         {words.map((w, i) => {
           const s = spring({ frame: d - 18 - i * 5, fps, config: { damping: 18, stiffness: 170 } });
           return (
-            <div key={w} style={{ fontSize: 38, fontWeight: 600, color: 'rgba(255,255,255,0.86)', opacity: s, transform: `translateY(${(1 - s) * 24}px)` }}>
+            <div key={w} style={{ fontSize: 38, fontWeight: 600, color: '#55586f', opacity: s, transform: `translateY(${(1 - s) * 24}px)` }}>
               {w}
             </div>
           );
@@ -422,8 +420,8 @@ const EndCard: React.FC<{ f: number; fps: number }> = ({ f, fps }) => {
       </div>
       <div
         style={{
-          marginTop: 38, padding: '10px 22px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.08)',
-          color: '#fff', fontSize: 20, fontWeight: 600, letterSpacing: 0.3, opacity: pill, transform: `scale(${0.9 + 0.1 * pill})`,
+          marginTop: 38, padding: '10px 22px', borderRadius: 999, border: '1px solid rgba(27,27,77,0.22)',
+          color: NAVY, fontSize: 20, fontWeight: 600, letterSpacing: 0.3, opacity: pill, transform: `scale(${0.9 + 0.1 * pill})`,
         }}
       >
         Invite only. For macOS 14 and later
@@ -468,7 +466,7 @@ export const Promo: React.FC = () => {
   const blurAmount = f >= T.blurEnd ? 7 * spring({ frame: f - T.blurEnd, fps, config: { damping: 20 } }) : 0;
 
   return (
-    <AbsoluteFill style={{ fontFamily: 'Inter, sans-serif', overflow: 'hidden', background: '#13133a' }}>
+    <AbsoluteFill style={{ fontFamily: 'Inter, sans-serif', overflow: 'hidden', background: NAVY }}>
       <Wallpaper />
       <div style={{ opacity: 1 - fly }}>
         <MenuBar />
@@ -560,8 +558,8 @@ export const Promo: React.FC = () => {
       <AbsoluteFill style={{ background: '#fff', opacity: flash }} />
       {f >= T.endIn ? <EndCard f={f} fps={fps} /> : null}
       {/* Fade from and to the same navy so the loop is seamless */}
-      <AbsoluteFill style={{ background: '#13133a', opacity: interpolate(f, [0, 10], [1, 0], clamp) }} />
-      <AbsoluteFill style={{ background: '#13133a', opacity: interpolate(f, [DURATION - 14, DURATION - 1], [0, 1], clamp) }} />
+      <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [0, 10], [1, 0], clamp) }} />
+      <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [DURATION - 14, DURATION - 1], [0, 1], clamp) }} />
     </AbsoluteFill>
   );
 };

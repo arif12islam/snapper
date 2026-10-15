@@ -76,7 +76,7 @@ export const FakeApp: React.FC<{ blurRow?: number; blurAmount?: number }> = ({ b
     {/* Sidebar */}
     <div style={{ position: 'absolute', left: 0, top: 44, width: 200, height: APP_H - 44, background: '#fafafc', borderRight: `1px solid ${line}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '22px 22px 18px' }}>
-        <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#5b5bf0,#9b6bff)' }} />
+        <div style={{ width: 26, height: 26, borderRadius: 8, background: '#5b5bf0' }} />
         <div style={{ fontSize: 18, fontWeight: 700 }}>Orbit</div>
       </div>
       {['Overview', 'Revenue', 'Customers', 'Reports', 'Settings'].map((t) => (
