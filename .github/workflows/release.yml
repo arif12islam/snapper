@@ -1,0 +1,30 @@
+name: Release
+
+# Builds Snapper on a Mac runner and publishes build/Snapper-<version>.zip as a GitHub release,
+# which is what the in-app updater downloads. Raise the version in build.sh (CFBundleShortVersionString)
+# and push to main: a release is created when that version has none yet.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: ./build.sh --zip
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/Snapper.app/Contents/Info.plist)"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; raise the version in build.sh to publish a new one."
+          else
+            gh release create "$VERSION" "build/Snapper-$VERSION.zip" --title "Snapper $VERSION" --notes "Snapper $VERSION"
+          fi
