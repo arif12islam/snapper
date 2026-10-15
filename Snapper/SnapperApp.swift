@@ -21,14 +21,14 @@ enum SnapperMain {
     }
 }
 
-/// Menu bar icon: a black template glyph, so macOS draws it dark or light to match the menu bar.
+/// Menu bar icon: the original white badge with a black glyph, shown as-is (not a template image).
 /// Falls back to an SF Symbol if the bundled PNG is missing.
 enum MenuBarIcon {
     static let image: NSImage = {
         if let url = Bundle.main.url(forResource: "MenuBarIcon@2x", withExtension: "png"),
            let img = NSImage(contentsOf: url) {
             img.size = NSSize(width: 18, height: 18)
-            img.isTemplate = true
+            img.isTemplate = false
             return img
         }
         let fallback = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Snapper") ?? NSImage()
