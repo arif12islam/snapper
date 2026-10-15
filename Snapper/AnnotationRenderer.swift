@@ -317,12 +317,13 @@ enum AnnotationRenderer {
             }
 
         case .rectangle:
-            let r = object.rect
-            if style.filled { ctx.fill(r) } else { ctx.stroke(r) }
+            drawShape(object.rect, ellipse: false, style: style, in: ctx)
 
         case .ellipse:
-            let r = object.rect
-            if style.filled { ctx.fillEllipse(in: r) } else { ctx.strokeEllipse(in: r) }
+            drawShape(object.rect, ellipse: true, style: style, in: ctx)
+
+        case .magnifier:
+            drawMagnifier(object, in: ctx, base: base)
 
         case .pencil:
             guard let first = object.points.first else { return }
@@ -388,27 +389,171 @@ enum AnnotationRenderer {
         }
     }
 
+    // MARK: - Shapes (rectangle / ellipse)
+
+    /// Shape styles: 0 rounded outline, 1 sharp outline, 2 tinted (outline plus a light fill), 3 solid.
+    private static func drawShape(_ r: CGRect, ellipse: Bool, style: AnnotationStyle, in ctx: CGContext) {
+        guard r.width > 0, r.height > 0 else { return }
+        let path = CGMutablePath()
+        if ellipse {
+            path.addEllipse(in: r)
+        } else if style.shapeStyle == 1 {
+            path.addRect(r)
+        } else {
+            let radius = min(max(style.lineWidth * 2.5 + 4, 8), min(r.width, r.height) / 2)
+            path.addRoundedRect(in: r, cornerWidth: radius, cornerHeight: radius)
+        }
+        switch style.shapeStyle {
+        case 3:
+            ctx.addPath(path)
+            ctx.fillPath()
+        case 2:
+            ctx.addPath(path)
+            ctx.setFillColor(style.color.withAlphaComponent(0.2).cgColor)
+            ctx.fillPath()
+            ctx.addPath(path)
+            ctx.strokePath()
+        default:
+            ctx.addPath(path)
+            ctx.strokePath()
+        }
+    }
+
+    // MARK: - Magnifier
+
+    private static func drawMagnifier(_ object: AnnotationObject, in ctx: CGContext, base: CGImage) {
+        let c = object.start, r = object.magSourceRadius
+        let L = object.magLoupeCenter, R = object.magLoupeRadius
+        let color = object.style.color
+        let lw = max(2, object.style.lineWidth * 0.7)
+        let dx = L.x - c.x, dy = L.y - c.y
+        let dist = max(hypot(dx, dy), 0.001)
+        let dir = CGPoint(x: dx / dist, y: dy / dist)
+
+        // Link between the area and its loupe (only while they are apart).
+        if dist > r + R + 2 {
+            ctx.setStrokeColor(color.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(lw * 0.7)
+            ctx.move(to: CGPoint(x: c.x + dir.x * r, y: c.y + dir.y * r))
+            ctx.addLine(to: CGPoint(x: L.x - dir.x * R, y: L.y - dir.y * R))
+            ctx.strokePath()
+        }
+
+        // Ring around the area being enlarged.
+        ctx.setStrokeColor(color.cgColor)
+        ctx.setLineWidth(lw * 0.8)
+        ctx.strokeEllipse(in: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
+
+        // Loupe: shadow, the enlarged picture clipped to a circle, then a ring.
+        let loupe = CGRect(x: L.x - R, y: L.y - R, width: R * 2, height: R * 2)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: 3), blur: 10, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fillEllipse(in: loupe)
+        ctx.restoreGState()
+
+        ctx.saveGState()
+        ctx.addEllipse(in: loupe)
+        ctx.clip()
+        let z = R / r
+        ctx.translateBy(x: L.x, y: L.y)
+        ctx.scaleBy(x: z, y: z)
+        ctx.translateBy(x: -c.x, y: -c.y)
+        ctx.interpolationQuality = .high
+        drawImage(ctx, base, in: CGRect(x: 0, y: 0, width: base.width, height: base.height))
+        ctx.restoreGState()
+
+        ctx.setStrokeColor(color.cgColor)
+        ctx.setLineWidth(lw)
+        ctx.strokeEllipse(in: loupe)
+    }
+
+    // MARK: - Arrows
+
+    /// Point and tangent on the quadratic curve tail > control > tip.
+    private static func quad(_ a: CGPoint, _ c: CGPoint, _ b: CGPoint, _ t: CGFloat) -> (p: CGPoint, d: CGPoint) {
+        let u = 1 - t
+        let p = CGPoint(x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y)
+        var d = CGPoint(x: 2 * u * (c.x - a.x) + 2 * t * (b.x - c.x), y: 2 * u * (c.y - a.y) + 2 * t * (b.y - c.y))
+        let l = hypot(d.x, d.y)
+        if l < 0.0001 { d = CGPoint(x: b.x - a.x, y: b.y - a.y) }
+        let n = max(hypot(d.x, d.y), 0.0001)
+        return (p, CGPoint(x: d.x / n, y: d.y / n))
+    }
+
+    /// Any arrow style, bent through the middle handle.
     private static func drawCurvedArrow(_ ctx: CGContext, from tail: CGPoint, control: CGPoint, to tip: CGPoint,
                                         style: AnnotationStyle) {
         let length = hypot(tip.x - tail.x, tip.y - tail.y)
         guard length > 2 else { return }
-        // Head points along the curve's tangent at the tip.
-        let tx = tip.x - control.x, ty = tip.y - control.y
-        let tl = max(hypot(tx, ty), 0.001)
-        let dir = CGPoint(x: tx / tl, y: ty / tl)
-        let perp = CGPoint(x: -dir.y, y: dir.x)
-        let headLength = min(max(14, style.lineWidth * 4.5), length * 0.6)
-        let headHalf = headLength * 0.5
-        let base = CGPoint(x: tip.x - dir.x * headLength * 0.85, y: tip.y - dir.y * headLength * 0.85)
+        let w = style.lineWidth
+        let tipDir = quad(tail, control, tip, 1).d
+        let tailDir = quad(tail, control, tip, 0).d       // pointing from the tail into the curve
 
-        ctx.move(to: tail)
-        ctx.addQuadCurve(to: base, control: control)
-        ctx.strokePath()
-        ctx.move(to: tip)
-        ctx.addLine(to: CGPoint(x: tip.x - dir.x * headLength + perp.x * headHalf, y: tip.y - dir.y * headLength + perp.y * headHalf))
-        ctx.addLine(to: CGPoint(x: tip.x - dir.x * headLength - perp.x * headHalf, y: tip.y - dir.y * headLength - perp.y * headHalf))
-        ctx.closePath()
-        ctx.fillPath()
+        func perp(_ d: CGPoint) -> CGPoint { CGPoint(x: -d.y, y: d.x) }
+        func at(_ p: CGPoint, _ d: CGPoint, _ along: CGFloat, _ across: CGFloat) -> CGPoint {
+            let n = perp(d)
+            return CGPoint(x: p.x + d.x * along + n.x * across, y: p.y + d.y * along + n.y * across)
+        }
+        func head(at p: CGPoint, dir d: CGPoint, length hl: CGFloat) {
+            ctx.move(to: p)
+            ctx.addLine(to: at(p, d, -hl, hl * 0.5))
+            ctx.addLine(to: at(p, d, -hl, -hl * 0.5))
+            ctx.closePath()
+            ctx.fillPath()
+        }
+
+        switch style.arrowStyle {
+        case 0: // tapered
+            let tHead = min(max(20, w * 6), length * 0.6)
+            let tHalf = tHead * 0.62
+            let baseTip = at(tip, tipDir, -tHead, 0)
+            let bodyHalf = max(1.5, w * 0.9)
+            let steps = 28
+            var left: [CGPoint] = [], right: [CGPoint] = []
+            for i in 0...steps {
+                let t = CGFloat(i) / CGFloat(steps)
+                let q = quad(tail, control, baseTip, t)
+                let half = w * 0.15 + (bodyHalf - w * 0.15) * t
+                left.append(at(q.p, q.d, 0, half))
+                right.append(at(q.p, q.d, 0, -half))
+            }
+            ctx.move(to: left[0])
+            for p in left.dropFirst() { ctx.addLine(to: p) }
+            ctx.addLine(to: at(baseTip, tipDir, 0, tHalf))
+            ctx.addLine(to: tip)
+            ctx.addLine(to: at(baseTip, tipDir, 0, -tHalf))
+            for p in right.reversed() { ctx.addLine(to: p) }
+            ctx.closePath()
+            ctx.fillPath()
+
+        case 1: // open chevron
+            let hl = min(max(14, w * 4.5), length * 0.6)
+            ctx.move(to: tail)
+            ctx.addQuadCurve(to: tip, control: control)
+            ctx.move(to: at(tip, tipDir, -hl, hl * 0.5))
+            ctx.addLine(to: tip)
+            ctx.addLine(to: at(tip, tipDir, -hl, -hl * 0.5))
+            ctx.strokePath()
+
+        case 3: // double-ended
+            let hl = min(max(14, w * 4.5), length * 0.4)
+            let a = at(tail, tailDir, hl * 0.9, 0)
+            let b = at(tip, tipDir, -hl * 0.9, 0)
+            ctx.move(to: a)
+            ctx.addQuadCurve(to: b, control: control)
+            ctx.strokePath()
+            head(at: tip, dir: tipDir, length: hl)
+            head(at: tail, dir: CGPoint(x: -tailDir.x, y: -tailDir.y), length: hl)
+
+        default: // classic and the old Curved style
+            let hl = min(max(14, w * 4.5), length * 0.6)
+            let base = at(tip, tipDir, -hl * 0.85, 0)
+            ctx.move(to: tail)
+            ctx.addQuadCurve(to: base, control: control)
+            ctx.strokePath()
+            head(at: tip, dir: tipDir, length: hl)
+        }
     }
 
     private static func drawArrow(_ ctx: CGContext, from tail: CGPoint, to tip: CGPoint, style: AnnotationStyle) {

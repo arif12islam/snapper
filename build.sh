@@ -4,7 +4,8 @@
 #
 # Usage:  ./build.sh            build, update /Applications/Snapper.app in place and relaunch
 #         ./build.sh --no-run   build only
-#         ./build.sh --zip      build/Snapper-<version>.zip, the file in-app updates download
+#         ./build.sh --zip      build/Snapper-<version>.zip
+#         ./build.sh --release  both the .dmg (what in-app updates download) and the .zip
 #         ./build.sh --dmg      build the drag-to-Applications installer, build/Snapper-<version>.dmg
 set -euo pipefail
 
@@ -77,8 +78,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Snapper</string>
   <key>CFBundleIdentifier</key><string>com.example.snapper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.2</string>
-  <key>CFBundleVersion</key><string>3</string>
+  <key>CFBundleShortVersionString</key><string>1.3</string>
+  <key>CFBundleVersion</key><string>4</string>
   <key>NSHumanReadableCopyright</key><string>Snapper. Built by Bykorp.</string>
 ${ICON_KEY}
   <key>LSMinimumSystemVersion</key><string>14.0</string>
@@ -112,7 +113,7 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 # Sign with the stable local identity when it exists (run ./setup-signing.sh once). A stable identity keeps
 # Screen Recording and other permissions across updates; plain ad-hoc signing makes macOS ask again every build.
 IDENTITY="Snapper Local Signing"
-if security find-identity -v -p codesigning 2>/dev/null | grep -q "$IDENTITY"; then
+if security find-identity -p codesigning 2>/dev/null | grep -q "$IDENTITY"; then
   echo "==> Signing with \"$IDENTITY\""
   codesign --force --deep --sign "$IDENTITY" "$APP"
 else
@@ -122,16 +123,18 @@ fi
 
 echo "==> Built $APP"
 
-if [ "${1:-}" = "--zip" ]; then
+MODE="${1:-}"
+
+if [ "$MODE" = "--zip" ] || [ "$MODE" = "--release" ]; then
   VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
   ZIP="build/Snapper-${VERSION}.zip"
   rm -f "$ZIP"
   ditto -c -k --keepParent "$APP" "$ZIP"
-  echo "==> Built $ZIP (upload this as a release asset for in-app updates)"
-  exit 0
+  echo "==> Built $ZIP"
+  [ "$MODE" = "--zip" ] && exit 0
 fi
 
-if [ "${1:-}" = "--dmg" ]; then
+if [ "$MODE" = "--dmg" ] || [ "$MODE" = "--release" ]; then
   VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
   DMG="build/Snapper-${VERSION}.dmg"
   RWDMG="build/rw.dmg"
@@ -151,7 +154,7 @@ if [ "${1:-}" = "--dmg" ]; then
     SetFile -a C "$MNT" 2>/dev/null || true
   fi
   # Lay out the installer window: app on the left, Applications on the right, arrow between.
-  osascript >/dev/null 2>&1 <<OSA || echo "note: window layout skipped (allow Terminal to control Finder to style the DMG)"
+  perl -e 'alarm 60; exec @ARGV' osascript >/dev/null 2>&1 <<OSA || echo "note: window layout skipped (allow Terminal to control Finder to style the DMG)"
 tell application "Finder"
   tell disk "$VOL"
     open
@@ -176,6 +179,9 @@ OSA
   hdiutil detach "$MNT" >/dev/null
   hdiutil convert "$RWDMG" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/null
   rm -f "$RWDMG"
+  if security find-identity -p codesigning 2>/dev/null | grep -q "$IDENTITY"; then
+    codesign --force --sign "$IDENTITY" "$DMG" || true
+  fi
   echo "==> Built $DMG"
   exit 0
 fi

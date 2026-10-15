@@ -76,7 +76,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
     private var pendingCrop: CGRect?
     private var nextZ = 1
 
-    private enum Handle: Equatable { case corner(Int), start, end, control, tip }
+    private enum Handle: Equatable { case corner(Int), edge(Int), rotate, start, end, control, tip }
     private var activeHandle: Handle?
     private var handleAnchor: CGPoint = .zero
 
@@ -650,16 +650,30 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         case .line:
             return [(.start, o.start), (.end, o.end)]
         case .arrow:
-            var list: [(Handle, CGPoint)] = [(.start, o.start), (.end, o.end)]
-            if o.isCurvedArrow { list.append((.control, o.curveControl)) }
-            return list
+            // Start, middle (drag to bend, double-click to straighten) and end.
+            return [(.start, o.start), (.control, o.curveControl), (.end, o.end)]
         case .callout:
             return [(.tip, o.end)]
+        case .magnifier:
+            return [(.end, o.end), (.control, o.magLoupeCenter)]
         default:
-            guard o.isBoxShaped, o.rotation == 0 else { return [] }
+            var list: [(Handle, CGPoint)] = []
             let r = o.rect
-            return [(.corner(0), CGPoint(x: r.minX, y: r.minY)), (.corner(1), CGPoint(x: r.maxX, y: r.minY)),
-                    (.corner(2), CGPoint(x: r.maxX, y: r.maxY)), (.corner(3), CGPoint(x: r.minX, y: r.maxY))]
+            if o.isBoxShaped, o.rotation == 0 {
+                list = [(.corner(0), CGPoint(x: r.minX, y: r.minY)), (.corner(1), CGPoint(x: r.maxX, y: r.minY)),
+                        (.corner(2), CGPoint(x: r.maxX, y: r.maxY)), (.corner(3), CGPoint(x: r.minX, y: r.maxY))]
+                if o.kind != .image {
+                    list += [(.edge(0), CGPoint(x: r.midX, y: r.minY)), (.edge(1), CGPoint(x: r.maxX, y: r.midY)),
+                             (.edge(2), CGPoint(x: r.midX, y: r.maxY)), (.edge(3), CGPoint(x: r.minX, y: r.midY))]
+                }
+            }
+            if o.kind == .rectangle || o.kind == .ellipse || o.kind == .image || o.kind == .text {
+                // Rotate handle above the box; it turns with the object.
+                let reach = r.height / 2 + 28 / max(fitScale, 0.05)
+                let a = o.rotation * .pi / 180
+                list.append((.rotate, CGPoint(x: r.midX + reach * sin(a), y: r.midY - reach * cos(a))))
+            }
+            return list
         }
     }
 
@@ -678,6 +692,22 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         case .end: o.end = p
         case .tip: o.end = p
         case .control: o.points = [p]
+        case .rotate:
+            let r = o.rect
+            var deg = atan2(p.y - r.midY, p.x - r.midX) * 180 / .pi + 90
+            if constrain { deg = (deg / 15).rounded() * 15 }
+            o.rotation = Self.normalized(deg)
+        case .edge(let side):
+            let r = o.rect
+            var minX = r.minX, maxX = r.maxX, minY = r.minY, maxY = r.maxY
+            switch side {
+            case 0: minY = p.y
+            case 1: maxX = p.x
+            case 2: maxY = p.y
+            default: minX = p.x
+            }
+            o.start = CGPoint(x: minX, y: minY)
+            o.end = CGPoint(x: maxX, y: maxY)
         case .corner:
             var q = p
             let a = handleAnchor
@@ -714,6 +744,14 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         switch effectiveTool {
         case .select:
             if let h = handleHit(at: raw), let o = selectedObject {
+                if h == .control, o.kind == .arrow, event.clickCount == 2 {
+                    // Double-click the middle handle to straighten the arrow.
+                    pushUndo()
+                    if let i = objects.firstIndex(where: { $0.id == o.id }) { objects[i].points = [] }
+                    onChange?()
+                    needsDisplay = true
+                    return
+                }
                 activeHandle = h
                 didPushMoveUndo = false
                 if case .corner(let i) = h {
@@ -763,7 +801,8 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
                                        start: p, end: p, points: [p], style: style, z: nextZ)
 
         default:
-            guard let kind = tool.objectKind else { return }
+            guard var kind = tool.objectKind else { return }
+            if tool == .rectangle && style.ellipse { kind = .ellipse }
             working = AnnotationObject(kind: kind, start: p, end: p, style: style, z: nextZ)
         }
     }
@@ -778,7 +817,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         var full = false
         func note(_ o: AnnotationObject?) {
             guard let o else { return }
-            if o.kind == .spotlight || o.kind == .callout || o.rotation != 0 { full = true }
+            if o.kind == .spotlight || o.kind == .callout || o.kind == .magnifier || o.rotation != 0 { full = true }
             dirty.append(o.rect)
             pad = max(pad, o.kind == .highlighter ? o.highlighterWidth : o.style.lineWidth * 3)
         }
@@ -786,6 +825,7 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         case .select:
             note(selectedObject)
             if let h = activeHandle {
+                if h == .rotate { full = true }
                 if !didPushMoveUndo { pushUndo(); didPushMoveUndo = true }
                 dragHandle(h, to: p, constrain: shift)
                 note(selectedObject)
@@ -848,6 +888,39 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             nextZ += 1
             selectedID = w.id
             beginTextEditing(id: w.id)
+            return
+        }
+        if w.kind == .magnifier, w.magSourceRadius < 10 {
+            w.end = CGPoint(x: w.start.x + 36, y: w.start.y)     // a plain click makes a default-sized loupe
+        }
+        if w.kind == .pencil, w.style.smartShapes, let shape = ShapeRecognizer.recognize(w.points) {
+            // Keep the drawing as one undo step and the clean shape as the next, so undo can bring it back.
+            var drawn = w
+            drawn.points = AnnotationObject.simplify(w.points, epsilon: 0.8)
+            pushUndo()
+            objects.append(drawn)
+            var made = AnnotationObject(kind: .line, z: drawn.z)
+            made.style = w.style
+            made.style.shapeStyle = 0
+            made.style.ellipse = false
+            let name: String
+            switch shape {
+            case .line(let a, let b):
+                made.kind = .line; made.start = a; made.end = b; name = "line"
+            case .arrow(let a, let b):
+                made.kind = .arrow; made.start = a; made.end = b; name = "arrow"
+            case .rectangle(let r):
+                made.kind = .rectangle
+                made.start = CGPoint(x: r.minX, y: r.minY); made.end = CGPoint(x: r.maxX, y: r.maxY); name = "rectangle"
+            case .ellipse(let r):
+                made.kind = .ellipse
+                made.start = CGPoint(x: r.minX, y: r.minY); made.end = CGPoint(x: r.maxX, y: r.maxY); name = "ellipse"
+            }
+            pushUndo()
+            if let i = objects.firstIndex(where: { $0.id == drawn.id }) { objects[i] = made } else { objects.append(made) }
+            nextZ += 1
+            selectedID = nil
+            Toast.show("Snapped to \(name). Undo keeps your drawing")
             return
         }
         if w.kind == .pencil {
@@ -1183,6 +1256,9 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
         // Handles in view space, so they stay the same size at any zoom.
         if tool == .select, let obj = selectedObject, obj.id != hiddenText {
             for (_, p) in handles(for: obj) { drawHandle(at: toView(p), in: ctx) }
+            if activeHandle == .rotate, let rp = handles(for: obj).first(where: { $0.0 == .rotate })?.1 {
+                drawPill("\(Int(obj.rotation.rounded()))°", near: toView(rp))
+            }
         }
 
         if tool == .crop { drawCropOverlay(ctx, frame: f, scale: s) }
@@ -1255,6 +1331,19 @@ final class AnnotateCanvas: NSView, NSTextFieldDelegate {
             ctx.stroke(r)
         }
         ctx.restoreGState()
+    }
+
+    /// Small dark label next to a point (used for the rotation angle).
+    private func drawPill(_ text: String, near p: CGPoint) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium), .foregroundColor: NSColor.white
+        ]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let size = str.size()
+        let pill = CGRect(x: p.x + 14, y: p.y - size.height / 2 - 3, width: size.width + 12, height: size.height + 6)
+        NSColor.black.withAlphaComponent(0.75).setFill()
+        NSBezierPath(roundedRect: pill, xRadius: 6, yRadius: 6).fill()
+        str.draw(at: CGPoint(x: pill.minX + 6, y: pill.minY + 3))
     }
 
     private func drawHandle(at p: CGPoint, in ctx: CGContext) {

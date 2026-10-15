@@ -2,9 +2,8 @@ import AppKit
 
 /// In-app updates. Snapper looks at a release feed, downloads the newer build, swaps itself in place and relaunches.
 ///
-/// The feed is set in Settings > General > Updates. It can be a GitHub repository ("owner/repo", using its latest
-/// release) or a URL returning JSON like {"version": "1.3", "url": "https://.../Snapper-1.3.zip", "notes": "..."}.
-/// The download can be a .zip containing Snapper.app (`./build.sh --zip` makes one) or a .dmg.
+/// Updates come from the latest GitHub release of the Snapper repository. The release carries a signed .dmg
+/// (preferred) and a .zip, both containing Snapper.app.
 @MainActor
 enum Updater {
     struct Release {
@@ -15,11 +14,13 @@ enum Updater {
 
     private(set) static var available: Release?
     private static var busy = false
-    private static let sourceKey = "updateSource"
     private static let lastCheckKey = "updateLastCheck"
 
-    static var source: String {
-        UserDefaults.standard.string(forKey: sourceKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    static let repository = "arif12islam/snapper"
+
+    /// Settings > General > Updates > "Check automatically".
+    static var automatic: Bool {
+        UserDefaults.standard.object(forKey: "autoUpdateCheck") as? Bool ?? true
     }
 
     static var currentVersion: String {
@@ -43,9 +44,9 @@ enum Updater {
         }
     }
 
-    /// Quiet check at launch, at most twice a day, and only when a source is configured.
+    /// Quiet check at launch, at most twice a day.
     static func checkInBackground() {
-        guard !source.isEmpty else { return }
+        guard automatic else { return }
         let last = UserDefaults.standard.double(forKey: lastCheckKey)
         guard Date().timeIntervalSince1970 - last > 12 * 3600 else { return }
         Task { await check(userInitiated: false) }
@@ -54,20 +55,11 @@ enum Updater {
     // MARK: Checking
 
     private static func feedURL() -> URL? {
-        let s = source
-        if s.isEmpty { return nil }
-        if s.lowercased().hasPrefix("http") { return URL(string: s) }
-        return URL(string: "https://api.github.com/repos/\(s)/releases/latest")
+        URL(string: "https://api.github.com/repos/\(repository)/releases/latest")
     }
 
     static func check(userInitiated: Bool) async {
-        guard let url = feedURL() else {
-            if userInitiated {
-                Toast.show("Set an update source in Settings > General first", seconds: 3)
-                SettingsWindowController.show(tab: "general")
-            }
-            return
-        }
+        guard let url = feedURL() else { return }
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastCheckKey)
         if userInitiated { Toast.show("Checking for updates…") }
         do {
@@ -81,7 +73,7 @@ enum Updater {
             }
             guard let release = parse(data) else {
                 throw NSError(domain: "Updater", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "The update feed has no downloadable .zip or .dmg."])
+                              userInfo: [NSLocalizedDescriptionKey: "No release with a download was found yet."])
             }
             if isNewer(release.version, than: currentVersion) {
                 available = release
@@ -108,7 +100,7 @@ enum Updater {
                       let u = URL(string: s) else { return nil }
                 return (name.lowercased(), u)
             }
-            let pick = candidates.first { $0.0.hasSuffix(".zip") } ?? candidates.first { $0.0.hasSuffix(".dmg") }
+            let pick = candidates.first { $0.0.hasSuffix(".dmg") } ?? candidates.first { $0.0.hasSuffix(".zip") }
             guard let url = pick?.1 else { return nil }
             return Release(version: tag, notes: json["body"] as? String ?? "", url: url)
         }

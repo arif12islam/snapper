@@ -512,7 +512,7 @@ enum MenuFactory {
         ])
 
         // Draw
-        var drawItems: [NSMenuItem] = AnnotationTool.allCases.filter { $0 != .callout }.map { t in
+        var drawItems: [NSMenuItem] = AnnotationTool.allCases.filter { $0 != .callout && $0 != .ellipse }.map { t in
             let i = command(t.title, "tool:" + t.rawValue)
             i.image = NSImage(systemSymbolName: t.symbol, accessibilityDescription: t.title)
             return i

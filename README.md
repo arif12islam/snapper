@@ -179,18 +179,21 @@ macOS has no public API for Focus, so Snapper runs two Shortcuts you create once
 
 Then turn on Settings > Recording > "Turn on Do Not Disturb".
 
-## Updates
+## Updates and releases
 
-Snapper can update itself. Put a release feed in Settings > General > Updates, then use "Check for Updates" in the
-menu bar (it also checks quietly at launch).
+Snapper updates itself from the latest release of this repository: "Check for Updates" in the menu bar (it also checks
+quietly at launch), then "Update to Snapper X". It downloads the signed .dmg, replaces the app and relaunches.
 
-1. Create a GitHub repository for the builds, for example `arif12islam/snapper-releases`.
-2. Raise the version in `build.sh`, run `./build.sh --zip`, and publish `build/Snapper-<version>.zip` as a release
-   whose tag is the version (`gh release create 1.3 build/Snapper-1.3.zip`).
-3. In Settings > General > Updates enter `arif12islam/snapper-releases`.
+Publishing a release is automatic. Raise the version in `build.sh` and push to `main`; the workflow in
+`.github/workflows/release.yml` builds on a GitHub Mac runner, signs the app and attaches `Snapper-<version>.dmg`
+(the drag-to-Applications installer) and a `.zip` to a new release. The repository has to be public.
 
-A private repository will not work, since the app downloads without credentials. Any URL returning
-`{"version": "1.3", "url": "https://.../Snapper-1.3.zip"}` works as a feed too.
+### One-time signing setup
 
-To skip the manual zip and release steps, push this folder to the repository: `.github/workflows/release.yml` builds
-the app on a GitHub Mac runner and publishes the release whenever you push a new version number.
+Run `./setup-signing.sh` on your Mac. It creates a signing certificate, so local builds keep their Screen Recording
+permission, and prints two values to add as repository secrets (Settings > Secrets and variables > Actions):
+`SIGNING_CERT_P12_BASE64` and `SIGNING_CERT_PASSWORD`. Without them the workflow still works but signs ad-hoc.
+
+This is a self-made certificate, not an Apple Developer ID: updates install cleanly, but a first-time download on a
+new Mac shows the "unidentified developer" prompt (right-click the app, Open). Removing that needs an Apple Developer
+account ($99/year) with notarization.

@@ -67,7 +67,7 @@ private struct GeneralSettings: View {
     @AppStorage("saveFolderPath") var saveFolderPath = ""
     @AppStorage("fileNameTemplate") var fileNameTemplate = "Snapper {date} at {time}"
     @AppStorage("retentionDays") var retentionDays = 30.0
-    @AppStorage("updateSource") var updateSource = ""
+    @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
 
     var body: some View {
         Form {
@@ -90,14 +90,12 @@ private struct GeneralSettings: View {
                 Toggle("Play a sound when capturing", isOn: $playSound)
             }
             Section("Updates") {
-                TextField("Update source", text: $updateSource, prompt: Text("owner/repo or a feed URL"))
+                Toggle("Check for updates automatically", isOn: $autoUpdateCheck)
                 HStack {
-                    Text("Version \(Updater.currentVersion)").font(.caption).foregroundColor(.secondary)
+                    Text("Version \(Updater.currentVersion)").foregroundColor(.secondary)
                     Spacer()
                     Button("Check Now") { Updater.menuAction() }
                 }
-                Text("A GitHub repository (its latest release) or a URL that returns {\"version\", \"url\"}. The download is a .zip or .dmg containing Snapper.app.")
-                    .font(.caption).foregroundColor(.secondary)
             }
             Section("After capture") {
                 Toggle("Show Quick Access overlay", isOn: $showQuickAccess)

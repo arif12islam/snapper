@@ -19,12 +19,12 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     /// Tool groups shown as separate segmented controls.
     private static let toolLayout: [[AnnotationTool]] = [
         [.select, .crop],
-        [.arrow, .line, .rectangle, .ellipse, .pencil, .highlighter],
-        [.text, .number],
+        [.arrow, .line, .rectangle, .pencil, .highlighter],
+        [.text, .number, .magnifier],
         [.spotlight, .pixelate, .blur]
     ]
 
-    private enum StyleControl: CaseIterable { case color, stroke, fill, arrow, bubble, text, size, blur, spotlight, angle, crop }
+    private enum StyleControl: CaseIterable { case color, stroke, fill, arrow, bubble, text, size, blur, spotlight, angle, crop, shapeKind, smart, zoom }
 
     private static let cropAspects: [(String, CGFloat?)] = [
         ("Free", nil), ("Original", -1), ("1:1", 1), ("4:3", 4.0 / 3.0), ("3:2", 1.5),
@@ -40,7 +40,11 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private let paletteStack = NSStackView()
     private let widthSlider = NSSlider(value: 4, minValue: 1, maxValue: 24, target: nil, action: nil)
     private let sizeSlider = NSSlider(value: 28, minValue: 12, maxValue: 96, target: nil, action: nil)
-    private let arrowPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let arrowSeg = NSSegmentedControl()
+    private let shapeKindSeg = NSSegmentedControl()
+    private let shapeStyleSeg = NSSegmentedControl()
+    private let smartCheck = NSButton(checkboxWithTitle: "Smart shapes", target: nil, action: nil)
+    private let magSlider = NSSlider(value: 2.5, minValue: 1.5, maxValue: 4, target: nil, action: nil)
     private let textPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let bubbleSeg = NSSegmentedControl(images: [
         NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "Bubble") ?? NSImage(),
@@ -219,6 +223,34 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         return box
     }
 
+    private static func symbol(_ name: String, _ weight: NSFont.Weight = .regular) -> NSImage {
+        let img = NSImage(systemSymbolName: name, accessibilityDescription: nil) ?? NSImage()
+        return img.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: weight)) ?? img
+    }
+
+    private func configure(_ seg: NSSegmentedControl, images: [NSImage], tips: [String]) {
+        seg.segmentCount = images.count
+        seg.trackingMode = .selectOne
+        seg.controlSize = .small
+        seg.target = self
+        seg.action = #selector(styleChanged)
+        for (i, img) in images.enumerated() {
+            seg.setImage(img, forSegment: i)
+            seg.setWidth(30, forSegment: i)
+            seg.setToolTip(tips[i], forSegment: i)
+        }
+        seg.selectedSegment = 0
+    }
+
+    private static func arrowSegment(for style: Int) -> Int {
+        switch style {
+        case 0: return 0
+        case 2, 4: return 1
+        case 1: return 2
+        default: return 3
+        }
+    }
+
     private func smallPopup(_ popup: NSPopUpButton, items: [String]) {
         popup.removeAllItems()
         popup.addItems(withTitles: items)
@@ -381,7 +413,23 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         angleSlider.action = #selector(angleChanged)
         angleSlider.isEnabled = false
 
-        smallPopup(arrowPopup, items: AnnotationStyle.arrowStyleNames)
+        configure(arrowSeg, images: [Self.symbol("arrowshape.right"), Self.symbol("arrow.right", .heavy),
+                                     Self.symbol("arrow.right", .light), Self.symbol("arrow.left.and.right")],
+                  tips: ["Tapered", "Bold", "Thin", "Double-ended"])
+        configure(shapeKindSeg, images: [Self.symbol("rectangle"), Self.symbol("circle")], tips: ["Rectangle", "Ellipse"])
+        configure(shapeStyleSeg, images: [Self.symbol("app"), Self.symbol("square"), Self.symbol("square.tophalf.filled"),
+                                          Self.symbol("square.fill")],
+                  tips: ["Rounded outline", "Sharp outline", "Tinted", "Solid"])
+        smartCheck.target = self
+        smartCheck.action = #selector(styleChanged)
+        smartCheck.controlSize = .small
+        smartCheck.font = .systemFont(ofSize: 11)
+        smartCheck.state = .on
+        smartCheck.toolTip = "Turn clean pen strokes into lines, arrows, rectangles and ellipses"
+        magSlider.target = self
+        magSlider.action = #selector(styleChanged)
+        magSlider.controlSize = .small
+        magSlider.widthAnchor.constraint(equalToConstant: 90).isActive = true
         smallPopup(textPopup, items: AnnotationStyle.textStyleNames)
         smallPopup(blurPopup, items: AnnotationStyle.blurModeNames)
         smallPopup(spotlightPopup, items: AnnotationStyle.spotlightShapeNames)
@@ -400,8 +448,10 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
         styleGroups[.color] = row([colorWell, picker, paletteStack], spacing: 6)
         styleGroups[.stroke] = row([label("Stroke"), widthSlider], spacing: 6)
-        styleGroups[.fill] = row([fillCheck], spacing: 6)
-        styleGroups[.arrow] = row([label("Arrow"), arrowPopup], spacing: 6)
+        styleGroups[.shapeKind] = row([shapeKindSeg, shapeStyleSeg], spacing: 8)
+        styleGroups[.arrow] = row([arrowSeg], spacing: 6)
+        styleGroups[.smart] = row([smartCheck], spacing: 6)
+        styleGroups[.zoom] = row([label("Zoom"), magSlider], spacing: 6)
         bubbleSeg.target = self
         bubbleSeg.action = #selector(styleChanged)
         bubbleSeg.controlSize = .small
@@ -413,7 +463,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         styleGroups[.size] = row([label("Size"), sizeSlider], spacing: 6)
         styleGroups[.blur] = row([label("Blur"), blurPopup], spacing: 6)
         styleGroups[.spotlight] = row([label("Shape"), spotlightPopup], spacing: 6)
-        styleGroups[.angle] = row([label("Angle"), angleSlider], spacing: 6)
         styleGroups[.crop] = row([label("Aspect"), cropPopup], spacing: 6)
 
         hintLabel.font = .systemFont(ofSize: 11)
@@ -427,7 +476,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         removeCropButton.controlSize = .small
         removeCropButton.font = .systemFont(ofSize: 11)
 
-        let ordered: [StyleControl] = [.crop, .color, .stroke, .fill, .arrow, .bubble, .text, .size, .blur, .spotlight, .angle]
+        let ordered: [StyleControl] = [.crop, .color, .stroke, .shapeKind, .arrow, .smart, .zoom, .bubble, .text, .size, .blur, .spotlight]
         var views: [NSView] = ordered.compactMap { styleGroups[$0] }
         views += [hintLabel, removeCropButton]
         let bar = row(views, spacing: 16)
@@ -559,9 +608,12 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         s.colorHex = colorWell.color.hexString
         s.lineWidth = CGFloat(widthSlider.doubleValue)
         s.fontSize = CGFloat(sizeSlider.doubleValue)
-        s.arrowStyle = max(0, arrowPopup.indexOfSelectedItem)
+        s.arrowStyle = [0, 2, 1, 3][max(0, min(3, arrowSeg.selectedSegment))]
         s.textStyle = max(0, textPopup.indexOfSelectedItem)
-        s.filled = fillCheck.state == .on
+        s.shapeStyle = max(0, shapeStyleSeg.selectedSegment)
+        s.ellipse = shapeKindSeg.selectedSegment == 1
+        s.magnify = CGFloat(magSlider.doubleValue)
+        s.smartShapes = smartCheck.state == .on
         s.bubble = bubbleSeg.selectedSegment != 1
         switch activeKind {
         case .blur?: s.effectMode = max(0, blurPopup.indexOfSelectedItem)
@@ -575,12 +627,15 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         colorWell.color = style.color
         widthSlider.doubleValue = Double(style.lineWidth)
         sizeSlider.doubleValue = Double(style.fontSize)
-        arrowPopup.selectItem(at: style.arrowStyle)
+        arrowSeg.selectedSegment = Self.arrowSegment(for: style.arrowStyle)
+        shapeKindSeg.selectedSegment = style.ellipse ? 1 : 0
+        shapeStyleSeg.selectedSegment = max(0, min(3, style.shapeStyle))
+        magSlider.doubleValue = Double(style.magnify)
+        smartCheck.state = style.smartShapes ? .on : .off
         textPopup.selectItem(at: style.textStyle)
         bubbleSeg.selectedSegment = style.bubble ? 0 : 1
         blurPopup.selectItem(at: min(style.effectMode, 1))
         spotlightPopup.selectItem(at: min(style.effectMode, 1))
-        fillCheck.state = style.filled ? .on : .off
         // Update stored style without re-triggering an edit of the selected object.
         canvas.style = style
     }
@@ -617,8 +672,10 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         }
         let visible: [StyleControl: Bool] = [
             .color: kind != nil && !isAny(.pixelate, .blur, .spotlight, .image),
-            .stroke: isAny(.arrow, .line, .rectangle, .ellipse, .pencil, .highlighter),
-            .fill: isAny(.rectangle, .ellipse),
+            .stroke: isAny(.arrow, .line, .rectangle, .ellipse, .pencil, .highlighter, .magnifier),
+            .shapeKind: isAny(.rectangle, .ellipse),
+            .smart: isAny(.pencil),
+            .zoom: isAny(.magnifier),
             .arrow: isAny(.arrow),
             .bubble: tool == .text,
             .text: isAny(.text) && !(tool == .text && bubbleSeg.selectedSegment != 1),
@@ -644,6 +701,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             hint = "Drag over what to emphasise; the rest dims"
         case .highlighter:
             hint = "Drag across text: the stroke fits the line height. Shift for a straight line"
+        case .magnifier:
+            hint = "Drag over a detail. Drag the loupe by its middle handle to move it"
         case .number:
             hint = "Click to place 1, 2, 3…"
         case .text:

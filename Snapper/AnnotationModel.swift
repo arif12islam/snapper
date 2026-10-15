@@ -3,19 +3,20 @@ import CoreGraphics
 
 enum AnnotationKind: String, Codable {
     case arrow, rectangle, ellipse, line, pencil, text, pixelate, blur, number, callout
-    case highlighter, spotlight, image
+    case highlighter, spotlight, image, magnifier
 }
 
 enum AnnotationTool: String, CaseIterable {
-    case select, crop, arrow, rectangle, ellipse, line, pencil, highlighter, text, number, callout, spotlight, pixelate, blur
+    case select, crop, arrow, rectangle, ellipse, line, pencil, highlighter, text, number, callout, spotlight, magnifier, pixelate, blur
 
     var symbol: String {
         switch self {
         case .select: return "cursorarrow"
         case .crop: return "crop"
         case .arrow: return "arrow.up.right"
-        case .rectangle: return "rectangle"
+        case .rectangle: return "square"
         case .ellipse: return "circle"
+        case .magnifier: return "plus.magnifyingglass"
         case .line: return "line.diagonal"
         case .pencil: return "pencil.tip"
         case .highlighter: return "highlighter"
@@ -31,6 +32,7 @@ enum AnnotationTool: String, CaseIterable {
     var title: String {
         switch self {
         case .number: return "Counter"
+        case .rectangle: return "Shape"
         default: return rawValue.capitalized
         }
     }
@@ -42,7 +44,8 @@ enum AnnotationTool: String, CaseIterable {
         case .crop: return "c"
         case .arrow: return "a"
         case .rectangle: return "r"
-        case .ellipse: return "o"
+        case .ellipse: return ""
+        case .magnifier: return "m"
         case .line: return "l"
         case .pencil: return "p"
         case .highlighter: return "h"
@@ -69,6 +72,7 @@ enum AnnotationTool: String, CaseIterable {
         case .number: return .number
         case .callout: return .callout
         case .spotlight: return .spotlight
+        case .magnifier: return .magnifier
         case .select, .crop: return nil
         }
     }
@@ -80,7 +84,11 @@ struct AnnotationStyle: Codable, Equatable {
     var fontSize: CGFloat = 28
     var arrowStyle: Int = 0     // 0 tapered, 1 open, 2 classic filled, 3 double-ended, 4 curved
     var textStyle: Int = 0      // 0 plain, 1 bold, 2 outlined, 3 highlight, 4 boxed, 5 dark pill, 6 handwritten
-    var filled: Bool = false
+    var filled: Bool = false    // derived from shapeStyle (kept for older project files)
+    var shapeStyle: Int = 0 { didSet { filled = shapeStyle >= 2 } }   // 0 rounded outline, 1 sharp outline, 2 tinted, 3 solid
+    var ellipse: Bool = false   // Shape tool: ellipse instead of rectangle
+    var magnify: CGFloat = 2.5  // magnifier zoom
+    var smartShapes: Bool = true  // pen: turn clean strokes into shapes
     var bubble: Bool = true     // text tool: speech-bubble box (true) or plain text (false)
     var effectMode: Int = 0     // blur: 0 smooth, 1 secure.  spotlight: 0 rectangle, 1 ellipse
 
@@ -94,7 +102,7 @@ struct AnnotationStyle: Codable, Equatable {
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case colorHex, lineWidth, fontSize, arrowStyle, textStyle, filled, effectMode, bubble
+        case colorHex, lineWidth, fontSize, arrowStyle, textStyle, filled, effectMode, bubble, shapeStyle, ellipse, magnify, smartShapes
     }
 
     // Tolerant decoding: files from older versions miss newer keys.
@@ -108,6 +116,10 @@ struct AnnotationStyle: Codable, Equatable {
         filled = try c.decodeIfPresent(Bool.self, forKey: .filled) ?? false
         effectMode = try c.decodeIfPresent(Int.self, forKey: .effectMode) ?? 0
         bubble = try c.decodeIfPresent(Bool.self, forKey: .bubble) ?? true
+        shapeStyle = try c.decodeIfPresent(Int.self, forKey: .shapeStyle) ?? (filled ? 3 : 0)
+        ellipse = try c.decodeIfPresent(Bool.self, forKey: .ellipse) ?? false
+        magnify = try c.decodeIfPresent(CGFloat.self, forKey: .magnify) ?? 2.5
+        smartShapes = try c.decodeIfPresent(Bool.self, forKey: .smartShapes) ?? true
     }
 }
 
@@ -136,7 +148,18 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
     }
 
     var isFreehand: Bool { kind == .pencil || kind == .highlighter }
-    var isCurvedArrow: Bool { kind == .arrow && style.arrowStyle == 4 }
+    /// An arrow is curved once its middle handle has been moved (or when it came from the old Curved style).
+    var isCurvedArrow: Bool { kind == .arrow && (!points.isEmpty || style.arrowStyle == 4) }
+
+    // Magnifier: `start` is the centre of the area being enlarged, `end` a point on its edge, and `points[0]`
+    // the centre of the loupe (a default spot beside the area until it is moved).
+    var magSourceRadius: CGFloat { max(hypot(end.x - start.x, end.y - start.y), 6) }
+    var magLoupeRadius: CGFloat { magSourceRadius * max(style.magnify, 1.2) }
+    var magLoupeCenter: CGPoint {
+        if let c = points.first { return c }
+        let d = magSourceRadius + magLoupeRadius + 16
+        return CGPoint(x: start.x + d * 0.8, y: start.y - d * 0.6)
+    }
 
     /// Rect-like kinds can be resized from their corners.
     var isBoxShaped: Bool {
@@ -148,9 +171,10 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
 
     var highlighterWidth: CGFloat { thickness > 0 ? thickness : max(style.lineWidth * 4, 12) }
 
-    /// Control point of a curved arrow (stored, or a default bend to the left of the direction).
+    /// Middle handle of an arrow: where it was dragged to, the middle of the line, or (old Curved style) a default bend.
     var curveControl: CGPoint {
         if let c = points.first { return c }
+        if style.arrowStyle != 4 { return CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2) }
         let mx = (start.x + end.x) / 2, my = (start.y + end.y) / 2
         let dx = end.x - start.x, dy = end.y - start.y
         let len = max(hypot(dx, dy), 1)
@@ -171,6 +195,11 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
         if kind == .text || kind == .callout {
             let size = AnnotationRenderer.textSize(for: self)
             return CGRect(origin: start, size: size)
+        }
+        if kind == .magnifier {
+            let c = magLoupeCenter, r = magSourceRadius, R = magLoupeRadius
+            let a = CGRect(x: start.x - r, y: start.y - r, width: r * 2, height: r * 2)
+            return a.union(CGRect(x: c.x - R, y: c.y - R, width: R * 2, height: R * 2))
         }
         if kind == .number {
             let d = AnnotationRenderer.numberDiameter(for: style)
@@ -194,7 +223,7 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
     /// Kinds that can be rotated with the angle slider.
     var supportsRotation: Bool {
         switch kind {
-        case .pixelate, .blur, .number, .callout, .spotlight: return false
+        case .pixelate, .blur, .number, .callout, .spotlight, .magnifier: return false
         default: return true
         }
     }
@@ -250,6 +279,10 @@ struct AnnotationObject: Codable, Identifiable, Equatable {
         case .callout:
             return rect.insetBy(dx: -tolerance, dy: -tolerance).contains(p)
                 || hypot(p.x - end.x, p.y - end.y) <= tolerance * 1.5
+        case .magnifier:
+            let c = magLoupeCenter
+            if hypot(p.x - c.x, p.y - c.y) <= magLoupeRadius + tolerance { return true }
+            return abs(hypot(p.x - start.x, p.y - start.y) - magSourceRadius) <= tolerance + style.lineWidth / 2
         }
     }
 
