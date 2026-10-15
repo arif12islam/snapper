@@ -2,21 +2,12 @@ import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { APP_H, APP_W, BEST, FakeApp, barRect, emailCell } from './FakeApp';
 import { Icon } from './Icons';
+import TL from './timeline.json';
 
 // ---------- Timeline (frames at 30 fps) ----------
-const T = {
-  selStart: 8, selEnd: 38, flash: 45, flyStart: 45, flyEnd: 75,
-  rectStart: 90, rectEnd: 105, c1: 105,
-  arrowStart: 120, arrowEnd: 135,
-  textStart: 139, textEnd: 160, c2: 165,
-  blurStart: 180, blurEnd: 195,
-  magStart: 210, magEnd: 240,
-  bgClick: 255, cyc1: 270, cyc2: 285, cyc3: 300,
-  copyClick: 330, toastIn: 333, toastOut: 385,
-  outStart: 380, outEnd: 400,
-};
+const T = TL.product;
 export const PRODUCT_T = T;
-export const PRODUCT_LEN = 400;
+export const PRODUCT_LEN = TL.scenes.product[1] - TL.scenes.product[0];
 
 // ---------- Layout ----------
 const EX = 50, EY = 40, EW = 1500, EH = 920;
@@ -394,7 +385,7 @@ const Annotations: React.FC<{ f: number; fps: number }> = ({ f, fps }) => {
 
 // ---------- Chapter tag ----------
 const ChapterTag: React.FC<{ f: number; fps: number; n: number; label: string; start: number; end: number }> = ({ f, fps, n, label, start, end }) => {
-  if (f < start || f > end + 12) return null;
+  if (f < start || f > end + 11) return null;
   const inn = spring({ frame: f - start, fps, config: { damping: 16, stiffness: 170 } });
   const outT = ramp(f, end, end + 10);
   return (
@@ -549,10 +540,11 @@ export const ProductScene: React.FC = () => {
       ) : null}
 
       <AbsoluteFill style={{ background: '#fff', opacity: flash }} />
-      <ChapterTag f={f} fps={fps} n={1} label="Capture any area" start={4} end={78} />
-      <ChapterTag f={f} fps={fps} n={2} label="Mark it up" start={84} end={248} />
-      <ChapterTag f={f} fps={fps} n={3} label="Frame it" start={254} end={322} />
-      <ChapterTag f={f} fps={fps} n={4} label="Share a link" start={328} end={384} />
+      {/* Each tag is fully gone (end + 10) before the next one starts. */}
+      <ChapterTag f={f} fps={fps} n={1} label="Capture any area" start={4} end={T.rectStart - 18} />
+      <ChapterTag f={f} fps={fps} n={2} label="Mark it up" start={T.rectStart - 6} end={T.bgClick - 16} />
+      <ChapterTag f={f} fps={fps} n={3} label="Frame it" start={T.bgClick - 4} end={T.copyClick - 16} />
+      <ChapterTag f={f} fps={fps} n={4} label="Share a link" start={T.copyClick - 4} end={T.outStart - 4} />
       {/* Fade in from the navy intro */}
       <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [0, 10], [1, 0], clamp) }} />
     </AbsoluteFill>

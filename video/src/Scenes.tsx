@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { FinalShot } from './Product';
 import { Icon } from './Icons';
+import TL from './timeline.json';
 
 export const NAVY = '#1b1b4d';
 export const PAPER = '#f4f3ef';
@@ -56,15 +57,16 @@ const Counter: React.FC<{ n: number; x: number; y: number; s: number; size?: num
 export const Hook: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const circle = ramp(f, 56, 72);
-  const arrow = ramp(f, 70, 86);
-  const head = ramp(f, 84, 90);
+  const H = TL.hook;
+  const circle = ramp(f, H.circle[0], H.circle[1]);
+  const arrow = ramp(f, H.arrow[0], H.arrow[1]);
+  const head = ramp(f, H.head[0], H.head[1]);
   return (
     <AbsoluteFill style={{ ...font, background: PAPER }}>
       <div style={{ position: 'absolute', left: 150, top: 230 }}>
-        <Line f={f} start={9} size={150}>A screenshot</Line>
-        <Line f={f} start={24} size={150}>rarely explains</Line>
-        <Line f={f} start={39} size={150}>itself.</Line>
+        <Line f={f} start={H.lines[0]} size={150}>A screenshot</Line>
+        <Line f={f} start={H.lines[1]} size={150}>rarely explains</Line>
+        <Line f={f} start={H.lines[2]} size={150}>itself.</Line>
       </div>
       <svg width={1600} height={1000} style={{ position: 'absolute', inset: 0 }}>
         {/* Loose marker circle around "itself." */}
@@ -73,7 +75,7 @@ export const Hook: React.FC = () => {
         <Draw p={arrow} d="M 1330 860 C 1150 900, 860 860, 640 680" />
         <Draw p={head} d="M 668 742 L 636 676 L 708 680" />
       </svg>
-      <Counter n={1} x={612} y={590} s={pop(f, 92, fps)} />
+      <Counter n={1} x={612} y={590} s={pop(f, H.counter, fps)} />
     </AbsoluteFill>
   );
 };
@@ -83,17 +85,18 @@ export const Intro: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const panel = ramp(f, 0, 14);
-  const exit = ramp(f, 100, 116);
-  const icon = pop(f, 16, fps, 150, 12);
+  const I = TL.intro;
+  const exit = ramp(f, I.exit[0], I.exit[1]);
+  const icon = pop(f, I.icon, fps, 150, 12);
   return (
     <AbsoluteFill style={{ ...font, background: NAVY, transform: `translateY(${(1 - panel) * 100}%)` }}>
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: 1 - exit, transform: `translateY(${-exit * 60}px)` }}>
         <Img src={staticFile('icon.png')} style={{ width: 170, height: 170, transform: `scale(${icon}) rotate(${(1 - icon) * -20}deg)` }} />
         <div style={{ height: 30 }} />
-        <Line f={f} start={24} size={150} color="#fff">Meet Snapper.</Line>
+        <Line f={f} start={I.title} size={150} color="#fff">Meet Snapper.</Line>
         <div style={{ height: 22 }} />
-        <Line f={f} start={40} size={42} weight={500} color="rgba(255,255,255,0.72)">
-          Capture, annotate and share, right from your menu bar.
+        <Line f={f} start={I.sub} size={42} weight={500} color="rgba(255,255,255,0.72)">
+          Capture, annotate and share from your menu bar.
         </Line>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -155,10 +158,10 @@ export const Chat: React.FC = () => {
           <div style={{ fontSize: 16, color: '#8a8ca0' }}>4 members</div>
         </div>
         <div style={{ position: 'relative' }}>
-          <Message f={f} start={18} top={26} who="Maya" bg={RED} initials="M" time="9:41">
+          <Message f={f} start={TL.chat.messages[0]} top={26} who="Maya" bg={RED} initials="M" time="9:41">
             Which month did best?
           </Message>
-          <Message f={f} start={40} top={118} who="You" bg={NAVY} initials="A" time="9:42">
+          <Message f={f} start={TL.chat.messages[1]} top={118} who="You" bg={NAVY} initials="A" time="9:42">
             <div>Here you go</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2f5bd3', fontWeight: 600, marginTop: 2 }}>
               <Icon name="link" size={18} color="#2f5bd3" />
@@ -175,7 +178,7 @@ export const Chat: React.FC = () => {
               </div>
             </div>
           </Message>
-          <Message f={f} start={88} top={600} who="Maya" bg={RED} initials="M" time="9:42">
+          <Message f={f} start={TL.chat.messages[2]} top={600} who="Maya" bg={RED} initials="M" time="9:42">
             October. Clear as day, thanks.
           </Message>
         </div>
@@ -189,17 +192,18 @@ export const Record: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const panel = ramp(f, 0, 12);
-  const left = 150 + 150 * ramp(f, 50, 64);
-  const right = 1450 - 210 * ramp(f, 54, 68);
-  const play = left + (right - left) * interpolate(f, [66, 99], [0, 1], clamp);
+  const R = TL.record;
+  const left = 150 + 150 * ramp(f, R.trim[0], R.trim[1] - 4);
+  const right = 1450 - 210 * ramp(f, R.trim[0] + 4, R.trim[1]);
+  const play = left + (right - left) * interpolate(f, [R.play[0], R.play[1]], [0, 1], clamp);
   const secs = Math.max(0, Math.floor((f - 14) / 15));
   const pill = pop(f, 12, fps);
   return (
     <AbsoluteFill style={{ ...font, background: NAVY, transform: `translateY(${(1 - panel) * 100}%)` }}>
       <div style={{ position: 'absolute', left: 150, top: 170, display: 'flex', gap: 44 }}>
-        <Line f={f} start={14} size={140} color="#fff">Record.</Line>
-        <Line f={f} start={29} size={140} color="#fff">Trim.</Line>
-        <Line f={f} start={44} size={140} color={RED}>Send.</Line>
+        <Line f={f} start={R.words[0] - 4} size={140} color="#fff">Record.</Line>
+        <Line f={f} start={R.words[1] - 4} size={140} color="#fff">Trim.</Line>
+        <Line f={f} start={R.words[2] - 4} size={140} color={RED}>Send.</Line>
       </div>
 
       <div
@@ -226,7 +230,7 @@ export const Record: React.FC = () => {
       <div style={{ position: 'absolute', left: 150, top: 540, width: left - 150, height: 150, background: 'rgba(10,10,30,0.65)' }} />
       <div style={{ position: 'absolute', left: right, top: 540, width: 1450 - right, height: 150, background: 'rgba(10,10,30,0.65)' }} />
       <div style={{ position: 'absolute', left: left - 8, top: 530, width: right - left + 16, height: 170, border: '6px solid #fff', borderRadius: 12, boxSizing: 'border-box', opacity: ramp(f, 10, 22) }} />
-      {f >= 66 ? <div style={{ position: 'absolute', left: play - 2, top: 518, width: 4, height: 194, borderRadius: 2, background: RED }} /> : null}
+      {f >= R.play[0] ? <div style={{ position: 'absolute', left: play - 2, top: 518, width: 4, height: 194, borderRadius: 2, background: RED }} /> : null}
     </AbsoluteFill>
   );
 };
@@ -237,14 +241,15 @@ export const Outro: React.FC = () => {
   const { fps } = useVideoConfig();
   const panel = ramp(f, 0, 12);
   const words = ['Capture.', 'Annotate.', 'Record.', 'Share.'];
-  const starts = [15, 30, 45, 60];
-  const brand = pop(f, 75, fps, 150, 13);
-  const fadeOut = ramp(f, 108, 119);
+  const O = TL.outro;
+  const starts = O.words;
+  const brand = pop(f, O.brand, fps, 150, 13);
+  const fadeOut = ramp(f, O.fade[0], O.fade[1]);
   return (
     <AbsoluteFill style={{ ...font, background: PAPER, transform: `translateY(${(1 - panel) * 100}%)` }}>
       {words.map((w, i) => {
         const s = pop(f, starts[i], fps, 260, 18);
-        const gone = i < 3 ? f >= starts[i + 1] : f >= 75;
+        const gone = i < 3 ? f >= starts[i + 1] : f >= O.brand;
         if (f < starts[i] || gone) return null;
         return (
           <AbsoluteFill key={w} style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -254,7 +259,7 @@ export const Outro: React.FC = () => {
           </AbsoluteFill>
         );
       })}
-      {f >= 75 ? (
+      {f >= O.brand ? (
         <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: 1 - fadeOut }}>
           <Img src={staticFile('icon.png')} style={{ width: 170, height: 170, transform: `scale(${brand})` }} />
           <div style={{ marginTop: 26, fontSize: 120, fontWeight: 800, color: NAVY, letterSpacing: -5, opacity: brand, transform: `translateY(${(1 - brand) * 30}px)` }}>
@@ -263,7 +268,7 @@ export const Outro: React.FC = () => {
           <div
             style={{
               marginTop: 22, padding: '12px 24px', borderRadius: 999, background: NAVY, color: '#fff', fontSize: 22, fontWeight: 600,
-              opacity: pop(f, 88, fps), transform: `scale(${0.9 + 0.1 * pop(f, 88, fps)})`,
+              opacity: pop(f, O.pill, fps), transform: `scale(${0.9 + 0.1 * pop(f, O.pill, fps)})`,
             }}
           >
             Invite only. For macOS 14 and later

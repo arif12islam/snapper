@@ -257,7 +257,7 @@
   <div class="wrap">
     <div class="film-head">
       <div>
-        <p class="eyebrow">The 30 second tour</p>
+        <p class="eyebrow">The 46 second tour</p>
         <h2>From screen to shared.</h2>
       </div>
       <div class="controls">
@@ -280,10 +280,10 @@
       </video>
     </div>
     <div class="chapters" id="chapters">
-      <button type="button" data-t="8"><span class="dot">1</span>Capture</button>
-      <button type="button" data-t="10.8"><span class="dot">2</span>Mark it up</button>
-      <button type="button" data-t="16.5"><span class="dot">3</span>Frame it</button>
-      <button type="button" data-t="18.9"><span class="dot">4</span>Share it</button>
+      <button type="button" data-t="14"><span class="dot">1</span>Capture</button>
+      <button type="button" data-t="17.2"><span class="dot">2</span>Mark it up</button>
+      <button type="button" data-t="25.3"><span class="dot">3</span>Frame it</button>
+      <button type="button" data-t="27.8"><span class="dot">4</span>Share it</button>
     </div>
   </div>
 </section>
@@ -441,7 +441,7 @@
   });
   video.addEventListener("timeupdate", function () {
     var t = video.currentTime, active = -1;
-    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 20.8) active = i;
+    for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 29.9) active = i;
     chapterButtons.forEach(function (b, i) { b.classList.toggle("active", i === active); });
   });
 

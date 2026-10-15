@@ -16,7 +16,9 @@ FPS = 30
 BPM = 120
 BEAT = 60 / BPM
 BAR = BEAT * 4
-LENGTH = 32.0
+import json as _json
+TL = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src', 'timeline.json')))
+LENGTH = TL['length'] / TL['fps']
 N = int(SR * LENGTH)
 rng = np.random.default_rng(7)
 
@@ -242,6 +244,12 @@ def sfx_beep():
 
 
 # ------------------------------------------------------------------ arrangement
+SC = {k: v[0] / FPS for k, v in TL['scenes'].items()}
+DROP = SC['intro']                      # drums and bass arrive with "Meet Snapper"
+FULL = SC['product']                    # claps and arpeggio for the walkthrough
+CHAT, RECORD, OUTRO = SC['chat'], SC['record'], SC['outro']
+WORDS = [OUTRO + w / FPS for w in TL['outro']['words']]
+FINAL = WORDS[-1]                       # big chord on "Share."
 
 CHORDS = [
     ([53, 57, 60, 64], 41),   # Fmaj7
@@ -251,100 +259,93 @@ CHORDS = [
 ]
 
 kick_times = []
-
-for bar in range(16):
-    t0 = bar * BAR
+n_beats = int(LENGTH / BEAT)
+for b in range(n_beats):
+    t = b * BEAT
+    bar, bb = divmod(b, 4)
     notes, root = CHORDS[bar % 4]
+    groove = DROP <= t < WORDS[0] - BEAT
 
-    if bar < 15:
-        pad.add(t0, pad_chord(notes, BAR + 0.3), gain=0.9 if bar < 14 else 0.6)
+    if bb == 0 and t < WORDS[0] - BEAT:
+        pad.add(t, pad_chord(notes, BAR + 0.3), gain=0.8 if t < DROP else 0.9)
+    if t < WORDS[0] - BEAT:
+        # Electric piano stabs on 1, the "and" of 2, and 4.
+        for off, vel in ((0.0, 1.0), (1.5, 0.6), (3.0, 0.75)):
+            if bb == 0:
+                for k, note in enumerate(notes):
+                    keys.add(t + off * BEAT + k * 0.004, ep_note(note + 12, 1.0, 0.8 + 0.2 * vel),
+                             gain=vel * (0.7 if t < DROP else 1.0), pan=-0.25 + 0.17 * k)
+    if t >= 4.0 and t < DROP:
+        drums.add(t + BEAT / 2, hat(), gain=0.28, pan=0.3)
+    if groove:
+        kick_times.append(t)
+        sixteenths = t >= RECORD
+        steps = 4 if sixteenths else 2
+        for e in range(steps):
+            drums.add(t + e * BEAT / steps, hat(open_=(bb == 3 and e == steps - 1 and t >= FULL)),
+                      gain=(0.3 if e % 2 else 0.18) if steps == 2 else (0.22 if e % 2 else 0.16), pan=0.3)
+        if t >= FULL and bb in (1, 3):
+            drums.add(t, clap(), gain=0.8, pan=-0.1)
+        for e in range(2):
+            note = root + (12 if (bb == 3 and e == 1) else 0)
+            bass.add(t + e * BEAT / 2, bass_note(note, BEAT / 2 * 0.9), gain=0.9 if e == 0 else 0.7)
+        if FULL <= t < CHAT and bb == 0:
+            pattern = [0, 1, 2, 3, 2, 1, 3, 2]
+            for e, idx in enumerate(pattern):
+                pl = pluck(notes[idx] + 24)
+                keys.add(t + e * BEAT / 2, pl, gain=0.8, pan=0.45 if e % 2 else -0.45)
+                verb_send.add(t + e * BEAT / 2 + 3 * BEAT / 4, pl * 0.5, pan=-0.45 if e % 2 else 0.45)
 
-    # Electric piano: stab on 1, the "and" of 2, and 4.
-    if bar < 14:
-        for b, vel in ((0.0, 1.0), (1.5, 0.6), (3.0, 0.75)):
-            for k, note in enumerate(notes):
-                keys.add(t0 + b * BEAT + k * 0.004, ep_note(note + 12, 1.0, 0.8 + 0.2 * vel), gain=vel, pan=-0.25 + 0.17 * k)
+# Clap roll into the outro.
+for s16 in range(8):
+    drums.add(WORDS[0] - 1.0 + s16 * BEAT / 4, clap(), gain=0.18 + 0.07 * s16, pan=0.1)
 
-    # Drums from the intro (bar 2) through bar 13.
-    if 2 <= bar <= 13:
-        for b in range(4):
-            kick_times.append(t0 + b * BEAT)
-        for e in range(8):
-            if e % 2 == 1 or bar >= 4:
-                drums.add(t0 + e * BEAT / 2, hat(open_=(e % 2 == 1 and bar >= 4 and e == 7)), gain=0.32 if e % 2 else 0.2, pan=0.3)
-        if bar >= 4:
-            for b in (1, 3):
-                drums.add(t0 + b * BEAT, clap(), gain=0.8, pan=-0.1)
-        if bar == 13:
-            for s16 in range(12, 16):
-                drums.add(t0 + s16 * BEAT / 4, clap(), gain=0.25 + 0.12 * (s16 - 12), pan=0.1)
-    elif bar < 2:
-        # Hook: only light hats on the off beats in bar 1.
-        if bar == 1:
-            for e in range(1, 8, 2):
-                drums.add(t0 + e * BEAT / 2, hat(), gain=0.35, pan=0.3)
-
-    # Bass: eighth notes with an octave hop on the last one.
-    if 2 <= bar <= 13:
-        for e in range(8):
-            note = root + (12 if e == 7 else 0)
-            bass.add(t0 + e * BEAT / 2, bass_note(note, BEAT / 2 * 0.9), gain=0.9 if e % 2 == 0 else 0.7)
-
-    # Plucked arpeggio during the product walkthrough.
-    if 4 <= bar <= 12:
-        pattern = [0, 1, 2, 3, 2, 1, 3, 2]
-        for e, idx in enumerate(pattern):
-            p = pluck(notes[idx] + 24)
-            keys.add(t0 + e * BEAT / 2, p, gain=0.8, pan=0.45 if e % 2 else -0.45)
-            verb_send.add(t0 + e * BEAT / 2 + 3 * BEAT / 4, p * 0.5, pan=-0.45 if e % 2 else 0.45)
-
-# Outro bar 14: the four words land on the four beats.
-for b in range(4):
-    kick_times.append(14 * BAR + b * BEAT)
-    notes, root = CHORDS[b % 4]
-    for k, note in enumerate(notes):
-        keys.add(14 * BAR + b * BEAT, ep_note(note + 12, 0.6), gain=0.9, pan=-0.25 + 0.17 * k)
-    bass.add(14 * BAR + b * BEAT, bass_note(root, 0.3), gain=1.0)
-
-# Final chord on "Share." (frame 900, 30 s), ringing out.
-final_t = sec(900)
+# Outro: the four words land on four beats, the last one with a big chord that rings out.
+for i, wt in enumerate(WORDS):
+    kick_times.append(wt)
+    notes, root = CHORDS[i % 4]
+    if wt < FINAL:
+        for k, note in enumerate(notes):
+            keys.add(wt, ep_note(note + 12, 0.6), gain=0.9, pan=-0.25 + 0.17 * k)
+        bass.add(wt, bass_note(root, 0.3), gain=1.0)
 for k, note in enumerate([53, 57, 60, 64, 69, 72]):
-    keys.add(final_t + k * 0.012, ep_note(note + 12, 2.0, 1.0), gain=1.1, pan=-0.4 + 0.16 * k)
-pad.add(final_t, pad_chord([41, 53, 57, 60, 64], 2.0), gain=1.2)
-bass.add(final_t, bass_note(29 + 12, 1.6), gain=1.0)
-kick_times.append(final_t)
+    keys.add(FINAL + k * 0.012, ep_note(note + 12, 3.0, 1.0), gain=1.1, pan=-0.4 + 0.16 * k)
+pad.add(FINAL, pad_chord([41, 53, 57, 60, 64], LENGTH - FINAL), gain=1.2)
+bass.add(FINAL, bass_note(29 + 12, 2.0), gain=1.0)
 
 for kt in kick_times:
     drums.add(kt, kick(), gain=1.0)
 
-# Riser into the intro drop at 4 s.
-sfx.add(sec(120) - 1.2, sfx_whoosh(1.3, 0.92), gain=0.9)
+# Riser into the drop.
+sfx.add(DROP - 1.2, sfx_whoosh(1.3, 0.92), gain=0.9)
 
 # ------------------------------------------------------------------ sound effects on picture
-P = 240  # product scene start
-events = [
-    (15, sfx_thump(), 0.8), (30, sfx_thump(), 0.8), (45, sfx_thump(), 0.9),
-    (56, sfx_marker(0.55), 1.0), (70, sfx_marker(0.55), 1.0), (92, sfx_pop(), 1.0),
-    (136, sfx_pop(), 0.8),
-    (P + 8, sfx_marker(1.0) * 0.4, 0.6),
-    (P + 45, sfx_shutter(), 1.0), (P + 47, sfx_whoosh(0.8, 0.5), 0.5),
-    (P + 90, sfx_marker(0.5), 1.0), (P + 105, sfx_pop(), 1.0),
-    (P + 120, sfx_whoosh(0.45, 0.6), 0.7),
-    (P + 165, sfx_pop(), 1.0), (P + 180, sfx_shh(0.5), 1.0),
-    (P + 210, sfx_pop(), 1.0), (P + 214, sfx_whoosh(0.9, 0.6), 0.45),
-    (P + 255, sfx_click(), 1.0), (P + 270, sfx_click(), 1.0), (P + 285, sfx_click(), 1.0), (P + 300, sfx_click(), 1.0),
-    (P + 330, sfx_click(), 1.0), (P + 333, sfx_chime(), 1.0),
-    (625 - 9, sfx_whoosh(0.5, 0.6), 0.8),
-    (625 + 18, sfx_msg(), 1.0), (625 + 40, sfx_msg(), 1.0), (625 + 88, sfx_msg(), 1.0),
-    (750 - 6, sfx_whoosh(0.45, 0.6), 0.8), (750 + 12, sfx_beep(), 1.0),
-    (750 + 50, sfx_click(), 0.7), (750 + 54, sfx_click(), 0.7),
-    (840 - 6, sfx_whoosh(0.45, 0.6), 0.8),
-    (915, sfx_chime((88, 95), 0.08), 1.0),
+H, I, P, C, R, O = (TL['scenes'][k][0] for k in ('hook', 'intro', 'product', 'chat', 'record', 'outro'))
+hk, pt, rc, oc = TL['hook'], TL['product'], TL['record'], TL['outro']
+events = [(H + f, sfx_thump(), 0.8) for f in hk['lines']]
+events += [
+    (H + hk['circle'][0], sfx_marker((hk['circle'][1] - hk['circle'][0]) / FPS + 0.1), 1.0),
+    (H + hk['arrow'][0], sfx_marker((hk['head'][1] - hk['arrow'][0]) / FPS + 0.05), 1.0),
+    (H + hk['counter'], sfx_pop(), 1.0),
+    (I + TL['intro']['icon'], sfx_pop(), 0.8),
+    (P + pt['selStart'], sfx_marker((pt['selEnd'] - pt['selStart']) / FPS) * 0.4, 0.6),
+    (P + pt['flash'], sfx_shutter(), 1.0), (P + pt['flash'] + 2, sfx_whoosh(0.8, 0.5), 0.5),
+    (P + pt['rectStart'], sfx_marker((pt['rectEnd'] - pt['rectStart']) / FPS + 0.05), 1.0), (P + pt['c1'], sfx_pop(), 1.0),
+    (P + pt['arrowStart'], sfx_whoosh((pt['arrowEnd'] - pt['arrowStart']) / FPS + 0.1, 0.6), 0.7),
+    (P + pt['c2'], sfx_pop(), 1.0), (P + pt['blurStart'], sfx_shh((pt['blurEnd'] - pt['blurStart']) / FPS + 0.1), 1.0),
+    (P + pt['magStart'], sfx_pop(), 1.0), (P + pt['magStart'] + 4, sfx_whoosh(0.9, 0.6), 0.45),
+    (P + pt['bgClick'], sfx_click(), 1.0), (P + pt['cyc1'], sfx_click(), 1.0), (P + pt['cyc2'], sfx_click(), 1.0), (P + pt['cyc3'], sfx_click(), 1.0),
+    (P + pt['copyClick'], sfx_click(), 1.0), (P + pt['toastIn'], sfx_chime(), 1.0),
+    (C - 9, sfx_whoosh(0.5, 0.6), 0.8),
+    (R - 6, sfx_whoosh(0.45, 0.6), 0.8), (R + 12, sfx_beep(), 1.0),
+    (R + rc['trim'][0], sfx_click(), 0.7), (R + rc['trim'][0] + 4, sfx_click(), 0.7),
+    (O - 6, sfx_whoosh(0.45, 0.6), 0.8),
+    (O + oc['brand'], sfx_chime((88, 95), 0.08), 1.0),
 ]
-# Typing ticks while the label "Best month yet" types out.
+events += [(C + f, sfx_msg(), 1.0) for f in TL['chat']['messages']]
 text = 'Best month yet'
 for i in range(len(text)):
-    frame = P + 139 + (160 - 139) * (i + 1) / len(text)
+    frame = P + pt['textStart'] + (pt['textEnd'] - pt['textStart']) * (i + 1) / len(text)
     events.append((frame, sfx_tick(), 0.9))
 
 for frame, sig, gain in events:
@@ -390,7 +391,7 @@ music_r = MUSIC * (drums.r * 0.9 + bass.r * sc * 0.9 + (keys.r + pad.r) * (0.6 +
 
 t = np.arange(N) / SR
 # Hook opens filtered and widens out by the drop at 4 s.
-open_mix = 0.55 + 0.45 * np.clip(t / 4.0, 0, 1)
+open_mix = 0.55 + 0.45 * np.clip(t / DROP, 0, 1)
 music_l *= open_mix
 music_r *= open_mix
 
@@ -417,7 +418,7 @@ if os.path.exists(meta_path):
         vo[i:j] += clip[: j - i]
     # Clean up the voice: remove rumble, add a little presence, even out the level.
     vo = hp(vo, 90)
-    vo = vo + 0.25 * bp(vo, 2500, 5000)
+    vo = vo + 0.25 * bp(vo, 2500, 5000) + 0.35 * bp(vo, 90, 220)
     speech = np.abs(vo) > 0.01
     vo_rms = np.sqrt(np.mean(vo[speech] ** 2)) if speech.any() else 1.0
     vo *= 10 ** (-15 / 20) / vo_rms
@@ -444,7 +445,7 @@ bed *= 10 ** (-3.0 / 20) / max(1e-9, np.max(np.abs(bed)))
 mix = bed + np.stack([vo, vo], axis=1)
 
 # Fade the very end so the loop is clean, after the last line has finished.
-fade = np.clip((LENGTH - t) / 0.25, 0, 1)
+fade = np.clip((LENGTH - t) / 0.6, 0, 1)
 fade_in = np.clip(t / 0.02, 0, 1)
 mix *= (fade * fade_in)[:, None]
 

@@ -1,0 +1,294 @@
+{
+  "fps": 30,
+  "bpm": 120,
+  "length": 1380,
+  "scenes": {
+    "hook": [
+      0,
+      248
+    ],
+    "intro": [
+      240,
+      420
+    ],
+    "product": [
+      420,
+      920
+    ],
+    "chat": [
+      900,
+      1065
+    ],
+    "record": [
+      1050,
+      1180
+    ],
+    "outro": [
+      1170,
+      1380
+    ]
+  },
+  "hook": {
+    "lines": [
+      9,
+      24,
+      39
+    ],
+    "circle": [
+      150,
+      166
+    ],
+    "arrow": [
+      164,
+      180
+    ],
+    "head": [
+      178,
+      184
+    ],
+    "counter": 186
+  },
+  "intro": {
+    "icon": 16,
+    "title": 24,
+    "sub": 40,
+    "exit": [
+      160,
+      176
+    ]
+  },
+  "product": {
+    "selStart": 10,
+    "selEnd": 45,
+    "flash": 52,
+    "flyStart": 52,
+    "flyEnd": 82,
+    "rectStart": 105,
+    "rectEnd": 122,
+    "c1": 125,
+    "arrowStart": 150,
+    "arrowEnd": 168,
+    "textStart": 172,
+    "textEnd": 195,
+    "c2": 200,
+    "blurStart": 220,
+    "blurEnd": 236,
+    "magStart": 270,
+    "magEnd": 300,
+    "bgClick": 345,
+    "cyc1": 360,
+    "cyc2": 375,
+    "cyc3": 390,
+    "copyClick": 420,
+    "toastIn": 423,
+    "toastOut": 480,
+    "outStart": 480,
+    "outEnd": 500
+  },
+  "chat": {
+    "messages": [
+      18,
+      40,
+      88
+    ]
+  },
+  "record": {
+    "words": [
+      33,
+      54,
+      75
+    ],
+    "trim": [
+      82,
+      98
+    ],
+    "play": [
+      100,
+      128
+    ]
+  },
+  "outro": {
+    "words": [
+      15,
+      30,
+      45,
+      60
+    ],
+    "brand": 75,
+    "pill": 88,
+    "fade": [
+      195,
+      209
+    ]
+  },
+  "voice": [
+    {
+      "at": [
+        0,
+        12
+      ],
+      "until": 112,
+      "text": "In a world... where screenshots explain nothing..."
+    },
+    {
+      "at": [
+        0,
+        136
+      ],
+      "until": 222,
+      "text": "one app dares to point."
+    },
+    {
+      "at": [
+        240,
+        22
+      ],
+      "until": 72,
+      "text": "Meet Snapper."
+    },
+    {
+      "at": [
+        240,
+        78
+      ],
+      "until": 170,
+      "text": "It lives in your menu bar. And waits."
+    },
+    {
+      "at": [
+        420,
+        -10
+      ],
+      "until": 22,
+      "text": "One shortcut."
+    },
+    {
+      "at": [
+        420,
+        28
+      ],
+      "until": 50,
+      "text": "Drag."
+    },
+    {
+      "at": [
+        420,
+        52
+      ],
+      "until": 90,
+      "text": "Snap."
+    },
+    {
+      "at": [
+        420,
+        102
+      ],
+      "until": 146,
+      "text": "Box the number."
+    },
+    {
+      "at": [
+        420,
+        147
+      ],
+      "until": 214,
+      "text": "Point at the peak."
+    },
+    {
+      "at": [
+        420,
+        218
+      ],
+      "until": 266,
+      "text": "Hide what's private."
+    },
+    {
+      "at": [
+        420,
+        268
+      ],
+      "until": 340,
+      "text": "And zoom in on what matters."
+    },
+    {
+      "at": [
+        420,
+        343
+      ],
+      "until": 415,
+      "text": "Frame it."
+    },
+    {
+      "at": [
+        420,
+        418
+      ],
+      "until": 478,
+      "text": "Click. Link copied."
+    },
+    {
+      "at": [
+        900,
+        46
+      ],
+      "until": 86,
+      "text": "Paste it anywhere."
+    },
+    {
+      "at": [
+        900,
+        92
+      ],
+      "until": 165,
+      "text": "And watch the questions stop."
+    },
+    {
+      "at": [
+        1050,
+        2
+      ],
+      "until": 33,
+      "text": "Need motion?"
+    },
+    {
+      "at": [
+        1050,
+        33
+      ],
+      "until": 54,
+      "text": "Record."
+    },
+    {
+      "at": [
+        1050,
+        54
+      ],
+      "until": 75,
+      "text": "Trim."
+    },
+    {
+      "at": [
+        1050,
+        75
+      ],
+      "until": 112,
+      "text": "Send."
+    },
+    {
+      "at": [
+        1170,
+        80
+      ],
+      "until": 112,
+      "text": "Snapper."
+    },
+    {
+      "at": [
+        1170,
+        114
+      ],
+      "until": 200,
+      "text": "Screenshots that make the point."
+    }
+  ]
+}

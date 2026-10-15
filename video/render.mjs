@@ -31,7 +31,7 @@ await renderMedia({
   outputLocation: path.join(out, 'snapper-explainer.mp4'),
   onProgress: ({ progress }) => process.stdout.write(`\r${Math.round(progress * 100)}%`),
 });
-await renderStill({ serveUrl, composition, inputProps: { withAudio: false }, frame: 560, output: path.join(out, 'snapper-poster.jpg'), imageFormat: 'jpeg', jpegQuality: 84, browserExecutable });
+await renderStill({ serveUrl, composition, inputProps: { withAudio: false }, frame: 760, output: path.join(out, 'snapper-poster.jpg'), imageFormat: 'jpeg', jpegQuality: 84, browserExecutable });
 const shot = await selectComposition({ serveUrl, id: 'AppShot', browserExecutable });
 await renderStill({ serveUrl, composition: shot, frame: 0, output: path.join(out, 'app-shot.png'), browserExecutable, scale: 1 });
 console.log('\ndone');
