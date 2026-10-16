@@ -1,11 +1,11 @@
 {
-  "voice": "B: am_michael -2.5 semitones",
+  "voice": "H: af_heart +0.0 semitones",
   "lines": [
     {
       "n": 0,
       "start": 8.867,
       "slot": 1.8,
-      "dur": 1.0,
+      "dur": 0.9,
       "speed": 1.0,
       "sr": 24000,
       "text": "Meet Snapper."
@@ -14,7 +14,7 @@
       "n": 1,
       "start": 15.533,
       "slot": 1.67,
-      "dur": 1.13,
+      "dur": 0.99,
       "speed": 1.0,
       "sr": 24000,
       "text": "Capture anything."
@@ -23,7 +23,7 @@
       "n": 2,
       "start": 17.333,
       "slot": 2.0,
-      "dur": 0.87,
+      "dur": 0.77,
       "speed": 1.0,
       "sr": 24000,
       "text": "Mark it up."
@@ -32,7 +32,7 @@
       "n": 3,
       "start": 25.367,
       "slot": 1.97,
-      "dur": 0.71,
+      "dur": 0.68,
       "speed": 1.0,
       "sr": 24000,
       "text": "Frame it."
@@ -41,7 +41,7 @@
       "n": 4,
       "start": 27.867,
       "slot": 2.07,
-      "dur": 0.74,
+      "dur": 0.6,
       "speed": 1.0,
       "sr": 24000,
       "text": "Share it."
@@ -50,7 +50,7 @@
       "n": 5,
       "start": 42.8,
       "slot": 2.87,
-      "dur": 1.83,
+      "dur": 1.63,
       "speed": 1.0,
       "sr": 24000,
       "text": "Screenshots that make the point."

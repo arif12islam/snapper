@@ -29,21 +29,22 @@ kokoro = Kokoro(os.path.join(MODEL_DIR, 'kokoro-v1.0.onnx'), os.path.join(MODEL_
 # Narrator presets: a Kokoro voice, then a clean pitch shift down for depth (pedalboard).
 # Pick one with VOICE_PRESET=A..E; samples of each were compared side by side.
 PRESETS = {
+    'H': ('af_heart', 'en-us', 0.0),      # chosen: warm, natural, no processing
     'A': ('am_michael', 'en-us', 0.0),
     'B': ('am_michael', 'en-us', -2.5),
     'C': ('bm_george', 'en-gb', -3.0),
     'D': ('am_fenrir', 'en-us', -3.5),
     'E': ('am_puck', 'en-us', -2.0),
 }
-PRESET = os.environ.get('VOICE_PRESET', 'B')
+PRESET = os.environ.get('VOICE_PRESET', 'H')
 VOICE, LANG, SEMITONES = PRESETS[PRESET]
 VOICE_NAME = f'{PRESET}: {VOICE} {SEMITONES:+.1f} semitones'
 BASE_SPEED = 1.0
 MAX_SPEED = 1.12
 
 from pedalboard import Compressor, HighpassFilter, LowShelfFilter, Pedalboard, PitchShift
-CHAIN = Pedalboard(([PitchShift(semitones=SEMITONES)] if SEMITONES else []) + [
-    HighpassFilter(70), LowShelfFilter(cutoff_frequency_hz=180, gain_db=2.5), Compressor(threshold_db=-20, ratio=2.5)])
+CHAIN = Pedalboard(([PitchShift(semitones=SEMITONES)] if SEMITONES else []) + [HighpassFilter(80)] +
+    ([LowShelfFilter(cutoff_frequency_hz=180, gain_db=2.5)] if SEMITONES else []) + [Compressor(threshold_db=-20, ratio=2.5)])
 
 out_dir = os.path.join(HERE, 'vo')
 os.makedirs(out_dir, exist_ok=True)
