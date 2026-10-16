@@ -4,6 +4,7 @@ import AVFoundation
 import SwiftUI
 import ImageIO
 import UniformTypeIdentifiers
+import QuartzCore
 
 /// Editor state shown in the sidebar.
 final class VideoEditModel: ObservableObject {
@@ -13,7 +14,15 @@ final class VideoEditModel: ObservableObject {
     @Published var hasCursorLog = false
     @Published var cursorHidden = false
     @Published var busy = false
+    @Published var duration: Double = 0
+    @Published var trimStart: Double = 0
+    @Published var trimEnd: Double = 0
     var onChange: (() -> Void)?
+    var onExportMP4: (() -> Void)?
+    var onExportGIF: (() -> Void)?
+    var onResetTrim: (() -> Void)?
+
+    var isTrimmed: Bool { duration > 0 && (trimStart > 0.05 || abs(trimEnd - duration) > 0.05) }
 }
 
 /// Window shown after a recording: playback, editor (background, format, smart zoom, cursor effects,
@@ -26,13 +35,15 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
     private static var controllers: [ObjectIdentifier: VideoWindowController] = [:]
 
     private let window: NSWindow
-    private let playerView = AVPlayerView()
+    private let surface = PlayerSurface()
+    private let timeline = TrimTimelineView()
+    private var player: AVPlayer?
+    private var timeObserver: Any?
+    private var playStateObservation: NSKeyValueObservation?
     private let url: URL
     private let status = NSTextField(labelWithString: "")
     private let progress = NSProgressIndicator()
     private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
-    private let trimPopup = NSPopUpButton(frame: .zero, pullsDown: true)
-    private let exportPopup = NSPopUpButton(frame: .zero, pullsDown: true)
     private var actionButtons: [NSButton] = []
     private let model = VideoEditModel()
     private var log: CursorLog?
@@ -63,6 +74,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         c.window.center()
         AppPresence.track(c.window)
         c.window.makeKeyAndOrderFront(nil)
+        c.window.makeFirstResponder(c.timeline)
     }
 
     private init(url: URL) {
@@ -84,49 +96,82 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         model.cursorHidden = log?.cursorHidden ?? false
         model.onChange = { [weak self] in self?.scheduleRebuild() }
 
-        let player = AVPlayer(url: url)
-        playerView.player = player
-        playerView.controlsStyle = .inline
-        playerView.showsFullScreenToggleButton = false
-        if let item = player.currentItem {
-            itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-                guard item.status == .failed else { return }
-                let message = item.error?.localizedDescription ?? "unknown error"
-                Task { @MainActor [weak self] in self?.setStatus("This file can't be played: \(message)") }
+        // Left column: the video on a dark stage, with the filmstrip timeline underneath.
+        if isGIF {
+            let still = NSImageView(image: NSImage(contentsOf: url) ?? NSImage())
+            still.animates = true
+            still.imageScaling = .scaleProportionallyUpOrDown
+            surface.showStill(still)
+        } else {
+            let p = AVPlayer(url: url)
+            player = p
+            surface.playerLayer.player = p
+            if let item = p.currentItem {
+                itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+                    guard item.status == .failed else { return }
+                    let message = item.error?.localizedDescription ?? "unknown error"
+                    Task { @MainActor [weak self] in self?.setStatus("This file can't be played: \(message)") }
+                }
+            }
+            playStateObservation = p.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] p, _ in
+                let playing = p.timeControlStatus != .paused
+                Task { @MainActor [weak self] in self?.surface.setPlaying(playing) }
+            }
+            timeObserver = p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 30), queue: .main) { [weak self] t in
+                MainActor.assumeIsolated {
+                    guard let self, t.seconds.isFinite else { return }
+                    self.timeline.playhead = t.seconds
+                }
+            }
+            surface.onClick = { [weak self] in self?.togglePlay() }
+            timeline.onToggle = { [weak self] in self?.togglePlay() }
+            timeline.onScrubBegin = { [weak self] in self?.player?.pause() }
+            timeline.onSeek = { [weak self] t in self?.seek(to: t) }
+            timeline.onTrim = { [weak self] start, end in self?.trimChanged(start: start, end: end) }
+            model.onResetTrim = { [weak self] in self?.resetTrim() }
+            model.onExportMP4 = { [weak self] in self?.exportMP4() }
+            model.onExportGIF = { [weak self] in self?.exportGIF() }
+
+            let asset = AVURLAsset(url: url)
+            Task { [weak self] in
+                let d = (try? await asset.load(.duration).seconds) ?? 0
+                guard let self, d.isFinite, d > 0 else { return }
+                self.timeline.configure(duration: d)
+                self.model.duration = d
+                self.model.trimStart = 0
+                self.model.trimEnd = d
+                self.timeline.loadThumbnails(asset: asset)
             }
         }
+        timeline.isHidden = isGIF
 
-        // Left: file actions. Right: status and Export.
+        let column = NSView()
+        for v in [surface, timeline] {
+            v.translatesAutoresizingMaskIntoConstraints = false
+            column.addSubview(v)
+        }
+        let timelineHeight = timeline.heightAnchor.constraint(equalToConstant: isGIF ? 0 : 124)
+        NSLayoutConstraint.activate([
+            surface.topAnchor.constraint(equalTo: column.topAnchor, constant: 20),
+            surface.leadingAnchor.constraint(equalTo: column.leadingAnchor, constant: 20),
+            surface.trailingAnchor.constraint(equalTo: column.trailingAnchor, constant: -20),
+            surface.bottomAnchor.constraint(equalTo: timeline.topAnchor, constant: -6),
+            timeline.leadingAnchor.constraint(equalTo: column.leadingAnchor, constant: 4),
+            timeline.trailingAnchor.constraint(equalTo: column.trailingAnchor, constant: -4),
+            timeline.bottomAnchor.constraint(equalTo: column.bottomAnchor, constant: -4),
+            timelineHeight
+        ])
+        column.setContentHuggingPriority(.init(1), for: .horizontal)
+        column.setContentCompressionResistancePriority(.init(1), for: .horizontal)
+
+        // File actions on the left, status on the right. Trim and Export live in the sidebar.
         let copyButton = NSButton(title: "Copy", target: self, action: #selector(copyFile))
         let revealButton = NSButton(title: "Show in Finder", target: self, action: #selector(reveal))
         let uploadButton = NSButton(title: "Upload", target: self, action: #selector(upload))
         copyButton.toolTip = "Copy the video file (with your edits) to paste into Finder, Mail, Slack"
-        uploadButton.toolTip = "Upload and copy the link (⌥-click for password and expiry)"
+        uploadButton.toolTip = "Upload and copy the link (\u{2325}-click for password and expiry)"
         for b in [copyButton, revealButton, uploadButton] { b.bezelStyle = .rounded }
         actionButtons = [copyButton, revealButton, uploadButton]
-
-        trimPopup.addItem(withTitle: "Trim")
-        trimPopup.addItem(withTitle: "Trim…")
-        trimPopup.lastItem?.target = self
-        trimPopup.lastItem?.action = #selector(trim)
-        trimPopup.addItem(withTitle: "Reset Trim")
-        trimPopup.lastItem?.target = self
-        trimPopup.lastItem?.action = #selector(resetTrim)
-        trimPopup.bezelStyle = .rounded
-        trimPopup.toolTip = "Cut the start and end. Exports use the trimmed range."
-
-        exportPopup.addItem(withTitle: "Export")
-        exportPopup.addItem(withTitle: "MP4…")
-        exportPopup.lastItem?.target = self
-        exportPopup.lastItem?.action = #selector(exportMP4)
-        exportPopup.addItem(withTitle: "GIF…")
-        exportPopup.lastItem?.target = self
-        exportPopup.lastItem?.action = #selector(exportGIF)
-        exportPopup.bezelStyle = .rounded
-        if isGIF {
-            trimPopup.isEnabled = false
-            exportPopup.isEnabled = false
-        }
 
         cancelButton.bezelStyle = .rounded
         cancelButton.target = self
@@ -146,15 +191,14 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
 
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let bar = NSStackView(views: [trimPopup, copyButton, revealButton, uploadButton, spacer,
-                                      status, progress, cancelButton, exportPopup])
+        let bar = NSStackView(views: [copyButton, revealButton, uploadButton, spacer, status, progress, cancelButton])
         bar.orientation = .horizontal
         bar.spacing = 8
         bar.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
 
         let sidebar = NSHostingView(rootView: VideoEditSidebar(model: model))
         sidebar.translatesAutoresizingMaskIntoConstraints = false
-        sidebar.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        sidebar.widthAnchor.constraint(equalToConstant: 290).isActive = true
         sidebar.isHidden = isGIF
 
         let divider = NSBox()
@@ -163,20 +207,14 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
         divider.isHidden = isGIF
 
-        let middle = NSStackView(views: [playerView, divider, sidebar])
+        let middle = NSStackView(views: [column, divider, sidebar])
         middle.orientation = .horizontal
         middle.spacing = 0
         middle.alignment = .top
-        playerView.translatesAutoresizingMaskIntoConstraints = false
 
         let rule = NSBox()
         rule.boxType = .separator
         rule.translatesAutoresizingMaskIntoConstraints = false
-
-        playerView.setContentHuggingPriority(.init(1), for: .horizontal)
-        playerView.setContentCompressionResistancePriority(.init(1), for: .horizontal)
-        playerView.setContentHuggingPriority(.init(1), for: .vertical)
-        playerView.setContentCompressionResistancePriority(.init(1), for: .vertical)
 
         // Plain constraints rather than a vertical stack: the stack let the editor area collapse to a sliver.
         let root = NSView()
@@ -185,6 +223,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
             root.addSubview(v)
         }
         window.contentView = root
+        window.initialFirstResponder = timeline
         NSLayoutConstraint.activate([
             middle.topAnchor.constraint(equalTo: root.topAnchor),
             middle.leadingAnchor.constraint(equalTo: root.leadingAnchor),
@@ -197,8 +236,8 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
             bar.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             bar.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             bar.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-            playerView.topAnchor.constraint(equalTo: middle.topAnchor),
-            playerView.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
+            column.topAnchor.constraint(equalTo: middle.topAnchor),
+            column.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
             divider.topAnchor.constraint(equalTo: middle.topAnchor),
             divider.bottomAnchor.constraint(equalTo: middle.bottomAnchor),
             sidebar.topAnchor.constraint(equalTo: middle.topAnchor),
@@ -212,8 +251,11 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         exportTimer?.invalidate()
         rebuildWork?.cancel()
         itemObservation = nil
-        playerView.player?.pause()
-        playerView.player = nil
+        playStateObservation = nil
+        if let o = timeObserver { player?.removeTimeObserver(o); timeObserver = nil }
+        player?.pause()
+        surface.playerLayer.player = nil
+        player = nil
         Self.controllers[ObjectIdentifier(self)] = nil
     }
 
@@ -225,23 +267,11 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         isBusy = busy
         model.busy = busy
         for b in actionButtons { b.isEnabled = !busy }
-        if !isGIF {
-            trimPopup.isEnabled = !busy
-            exportPopup.isEnabled = !busy
-        }
+        timeline.isLocked = busy
         progress.isHidden = !busy
         progress.doubleValue = 0
         cancelButton.isHidden = !busy
         if busy || !message.isEmpty { status.stringValue = message }
-    }
-
-    private func updateTrimStatus() {
-        guard let r = trimRange else { setStatus(""); return }
-        func fmt(_ t: CMTime) -> String {
-            let s = max(0, Int(t.seconds.rounded()))
-            return String(format: "%d:%02d", s / 60, s % 60)
-        }
-        setStatus("Trimmed \(fmt(r.start)) to \(fmt(r.end)). Exports use this range.")
     }
 
     // MARK: - Live preview
@@ -257,7 +287,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
     private func rebuild() async {
         rebuildGeneration += 1
         let generation = rebuildGeneration
-        guard let item = playerView.player?.currentItem else { return }
+        guard let item = player?.currentItem else { return }
         let settings = model.settings
         if settings.isIdentity && !(model.cursorHidden && model.hasCursorLog) {
             item.videoComposition = nil
@@ -285,35 +315,49 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
         await rebuild()
     }
 
-    // MARK: - Trim
+    // MARK: - Playback and trim
 
-    @objc private func trim() {
-        guard !isBusy else { return }
-        guard playerView.canBeginTrimming else {
-            setStatus("This video can't be trimmed.")
-            return
+    private func togglePlay() {
+        guard let p = player else { return }
+        if p.timeControlStatus != .paused {
+            p.pause()
+        } else {
+            let t = p.currentTime().seconds
+            let start = model.trimStart, end = model.trimEnd > 0 ? model.trimEnd : model.duration
+            if t < start - 0.01 || t >= end - 0.05 { seek(to: start) }
+            p.play()
         }
-        playerView.beginTrimming { [weak self] result in
-            Task { @MainActor in
-                guard let self, result == .okButton, let item = self.playerView.player?.currentItem else { return }
-                let start = item.reversePlaybackEndTime.isValid ? item.reversePlaybackEndTime : .zero
-                let end = item.forwardPlaybackEndTime.isValid ? item.forwardPlaybackEndTime : item.duration
-                let range = CMTimeRange(start: start, end: end)
-                guard range.duration.seconds > 0.1 else { return }
-                let whole = abs(range.duration.seconds - item.duration.seconds) < 0.05
-                self.trimRange = whole ? nil : range
-                self.updateTrimStatus()
-            }
+        window.makeFirstResponder(timeline)
+    }
+
+    private func seek(to seconds: Double) {
+        timeline.playhead = seconds
+        player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600),
+                     toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    /// The handles moved: remember the range, and keep playback inside it.
+    private func trimChanged(start: Double, end: Double) {
+        model.trimStart = start
+        model.trimEnd = end
+        let whole = start < 0.05 && abs(end - model.duration) < 0.05
+        let item = player?.currentItem
+        if whole {
+            trimRange = nil
+            item?.reversePlaybackEndTime = .invalid
+            item?.forwardPlaybackEndTime = .invalid
+        } else {
+            let range = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600),
+                                    end: CMTime(seconds: end, preferredTimescale: 600))
+            trimRange = range
+            item?.reversePlaybackEndTime = range.start
+            item?.forwardPlaybackEndTime = range.end
         }
     }
 
-    @objc private func resetTrim() {
-        trimRange = nil
-        if let item = playerView.player?.currentItem {
-            item.reversePlaybackEndTime = .invalid
-            item.forwardPlaybackEndTime = .invalid
-        }
-        setStatus("")
+    private func resetTrim() {
+        timeline.resetTrim()
+        trimChanged(start: 0, end: model.duration)
     }
 
     // MARK: - Export
@@ -485,6 +529,10 @@ private struct VideoEditSidebar: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                trimCard
+
+                Divider()
+
                 section("Background") {
                     LazyVGrid(columns: swatchColumns, alignment: .leading, spacing: 5) {
                         swatch(.none)
@@ -555,6 +603,53 @@ private struct VideoEditSidebar: View {
         }
         .disabled(model.busy)
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var trimCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Trim").font(.system(size: 13, weight: .semibold)).foregroundColor(.secondary)
+                Spacer()
+                if model.isTrimmed {
+                    Button("Reset") { model.onResetTrim?() }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                }
+            }
+            timeRow("Start", model.trimStart)
+            timeRow("End", model.trimEnd)
+            timeRow("Length", max(0, model.trimEnd - model.trimStart))
+            Menu {
+                Button("MP4\u{2026}") { model.onExportMP4?() }
+                Button("GIF\u{2026}") { model.onExportGIF?() }
+            } label: {
+                Text("Export")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.106, green: 0.106, blue: 0.302)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.12)))
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .padding(.top, 6)
+        }
+    }
+
+    private func timeRow(_ title: String, _ seconds: Double) -> some View {
+        let m = Int(seconds) / 60
+        let text = String(format: "%02d:%04.1f", m, max(0, seconds) - Double(m * 60))
+        return HStack {
+            Text(title).font(.system(size: 14))
+            Spacer()
+            Text(text).font(.system(size: 14, weight: .semibold)).monospacedDigit()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.07)))
     }
 
     private func bind(_ kp: WritableKeyPath<VideoEditSettings, CGFloat>, _ range: ClosedRange<Double>) -> Binding<Double> {
@@ -642,6 +737,313 @@ enum GIFExporter {
             return nil
         } catch {
             return error
+        }
+    }
+}
+
+
+// MARK: - Player stage
+
+/// Dark rounded stage that shows the video (or an animated GIF). Click to play or pause.
+@MainActor
+final class PlayerSurface: NSView {
+    let playerLayer = AVPlayerLayer()
+    var onClick: (() -> Void)?
+    private let glyph = NSImageView()
+    private var still: NSView?
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor(srgbRed: 0x15 / 255, green: 0x15 / 255, blue: 0x3d / 255, alpha: 1).cgColor
+        layer?.cornerRadius = 10
+        layer?.masksToBounds = true
+        playerLayer.videoGravity = .resizeAspect
+        layer?.addSublayer(playerLayer)
+
+        let config = NSImage.SymbolConfiguration(pointSize: 56, weight: .regular)
+        glyph.image = NSImage(systemSymbolName: "play.circle.fill", accessibilityDescription: "Play")?.withSymbolConfiguration(config)
+        glyph.contentTintColor = NSColor.white.withAlphaComponent(0.9)
+        glyph.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(glyph)
+        NSLayoutConstraint.activate([
+            glyph.centerXAnchor.constraint(equalTo: centerXAnchor),
+            glyph.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        playerLayer.frame = bounds
+        CATransaction.commit()
+    }
+
+    func showStill(_ view: NSView) {
+        still?.removeFromSuperview()
+        view.frame = bounds
+        view.autoresizingMask = [.width, .height]
+        addSubview(view, positioned: .below, relativeTo: glyph)
+        still = view
+        glyph.isHidden = true
+    }
+
+    func setPlaying(_ playing: Bool) {
+        glyph.isHidden = playing || still != nil
+    }
+
+    override func mouseDown(with event: NSEvent) { onClick?() }
+}
+
+// MARK: - Filmstrip timeline
+
+/// Thumbnails of the video with yellow trim handles, a red playhead and time labels underneath.
+@MainActor
+final class TrimTimelineView: NSView {
+    var onSeek: ((Double) -> Void)?
+    var onTrim: ((Double, Double) -> Void)?
+    var onToggle: (() -> Void)?
+    var onScrubBegin: (() -> Void)?
+    var isLocked = false
+
+    private(set) var duration: Double = 0
+    private(set) var start: Double = 0 { didSet { window?.invalidateCursorRects(for: self) } }
+    private(set) var end: Double = 0 { didSet { window?.invalidateCursorRects(for: self) } }
+    var playhead: Double = 0 { didSet { if oldValue != playhead { needsDisplay = true } } }
+
+    private var thumbs: [CGImage?] = []
+    private var asset: AVAsset?
+    private var thumbTask: Task<Void, Never>?
+    private var thumbWidth: CGFloat = 0
+    private var drag: Drag = .none
+
+    private enum Drag { case none, start, end, playhead }
+
+    private let pad: CGFloat = 16
+    private let handleW: CGFloat = 14
+    private let yellow = NSColor(srgbRed: 1.0, green: 0.79, blue: 0.24, alpha: 1)
+    private let red = NSColor(srgbRed: 1.0, green: 0.23, blue: 0.19, alpha: 1)
+
+    override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+
+    func configure(duration: Double) {
+        self.duration = duration
+        start = 0
+        end = duration
+        needsDisplay = true
+    }
+
+    func resetTrim() {
+        start = 0
+        end = duration
+        needsDisplay = true
+    }
+
+    private var track: NSRect {
+        NSRect(x: pad, y: 24, width: max(40, bounds.width - pad * 2), height: max(24, bounds.height - 24 - 34))
+    }
+
+    private func x(_ t: Double) -> CGFloat {
+        guard duration > 0 else { return track.minX }
+        return track.minX + CGFloat(t / duration) * track.width
+    }
+
+    private func time(_ x: CGFloat) -> Double {
+        guard duration > 0 else { return 0 }
+        return Double(min(max((x - track.minX) / track.width, 0), 1)) * duration
+    }
+
+    // MARK: Thumbnails
+
+    func loadThumbnails(asset: AVAsset) {
+        self.asset = asset
+        regenerateThumbnails()
+    }
+
+    override func layout() {
+        super.layout()
+        if asset != nil, abs(bounds.width - thumbWidth) > 60 { regenerateThumbnails() }
+    }
+
+    private func regenerateThumbnails() {
+        guard let asset, duration > 0, bounds.width > 100 else { return }
+        thumbWidth = bounds.width
+        thumbTask?.cancel()
+        let tileH = track.height
+        let count = max(4, Int((track.width / (tileH * 1.6)).rounded(.up)))
+        let scale = window?.backingScaleFactor ?? 2
+        let total = duration
+        thumbs = Array(repeating: nil, count: count)
+        needsDisplay = true
+
+        thumbTask = Task { [weak self] in
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: tileH * 2.4 * scale, height: tileH * scale)
+            generator.requestedTimeToleranceBefore = .positiveInfinity
+            generator.requestedTimeToleranceAfter = .positiveInfinity
+            for i in 0..<count {
+                if Task.isCancelled { return }
+                let t = CMTime(seconds: total * (Double(i) + 0.5) / Double(count), preferredTimescale: 600)
+                guard let image = try? await generator.image(at: t).image else { continue }
+                if Task.isCancelled { return }
+                guard let self else { return }
+                if i < self.thumbs.count { self.thumbs[i] = image; self.needsDisplay = true }
+            }
+        }
+    }
+
+    // MARK: Drawing
+
+    override func draw(_ dirtyRect: NSRect) {
+        let tr = track
+        let xs = x(start), xe = x(end)
+
+        // Filmstrip
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(roundedRect: tr, xRadius: 9, yRadius: 9).addClip()
+        NSColor.controlBackgroundColor.setFill()
+        tr.fill()
+        if !thumbs.isEmpty {
+            let tw = tr.width / CGFloat(thumbs.count)
+            for (i, image) in thumbs.enumerated() {
+                let r = NSRect(x: tr.minX + CGFloat(i) * tw, y: tr.minY, width: tw, height: tr.height)
+                guard let cg = image else { continue }
+                let iw = CGFloat(cg.width), ih = CGFloat(cg.height)
+                let targetAspect = r.width / r.height, imageAspect = iw / ih
+                var src = NSRect(x: 0, y: 0, width: iw, height: ih)
+                if imageAspect > targetAspect {
+                    let w = ih * targetAspect
+                    src.origin.x = (iw - w) / 2
+                    src.size.width = w
+                } else {
+                    let h = iw / targetAspect
+                    src.origin.y = (ih - h) / 2
+                    src.size.height = h
+                }
+                NSImage(cgImage: cg, size: NSSize(width: iw, height: ih))
+                    .draw(in: r, from: src, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+                if i < thumbs.count - 1 {
+                    NSColor.white.withAlphaComponent(0.85).setFill()
+                    NSRect(x: r.maxX - 0.75, y: r.minY, width: 1.5, height: r.height).fill()
+                }
+            }
+        }
+        // Everything outside the kept range is washed out.
+        NSColor.windowBackgroundColor.withAlphaComponent(0.78).setFill()
+        NSRect(x: tr.minX, y: tr.minY, width: max(0, xs - tr.minX), height: tr.height).fill()
+        NSRect(x: xe, y: tr.minY, width: max(0, tr.maxX - xe), height: tr.height).fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        // Yellow frame with thicker side handles
+        let outer = NSRect(x: xs - handleW, y: tr.minY - 5, width: (xe - xs) + handleW * 2, height: tr.height + 10)
+        let inner = NSRect(x: xs, y: tr.minY, width: max(0, xe - xs), height: tr.height)
+        let frame = NSBezierPath(roundedRect: outer, xRadius: 10, yRadius: 10)
+        frame.append(NSBezierPath(roundedRect: inner, xRadius: 3, yRadius: 3))
+        frame.windingRule = .evenOdd
+        yellow.setFill()
+        frame.fill()
+        NSColor.black.withAlphaComponent(0.25).setFill()
+        for gx in [xs - handleW / 2, xe + handleW / 2] {
+            NSBezierPath(roundedRect: NSRect(x: gx - 1, y: tr.midY - 9, width: 2, height: 18), xRadius: 1, yRadius: 1).fill()
+        }
+
+        // Playhead
+        let px = x(min(max(playhead, 0), duration))
+        red.setFill()
+        NSBezierPath(roundedRect: NSRect(x: px - 1.5, y: 10, width: 3, height: tr.maxY + 12 - 10), xRadius: 1.5, yRadius: 1.5).fill()
+        NSBezierPath(ovalIn: NSRect(x: px - 8, y: 4, width: 16, height: 16)).fill()
+
+        drawLabels(tr)
+    }
+
+    private func drawLabels(_ tr: NSRect) {
+        guard duration > 0 else { return }
+        let steps: [Double] = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800]
+        let limit = max(2, Int(tr.width / 90))
+        let step = steps.first(where: { duration / $0 <= Double(limit) }) ?? 3600
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+            .foregroundColor: NSColor.secondaryLabelColor
+        ]
+        var t = 0.0
+        while t <= duration + 0.001 {
+            let label = String(format: "%02d:%02d", Int(t) / 60, Int(t) % 60) as NSString
+            let size = label.size(withAttributes: attrs)
+            let lx = t == 0 ? tr.minX : min(max(x(t) - size.width / 2, 0), bounds.width - size.width)
+            label.draw(at: NSPoint(x: lx, y: tr.maxY + 14), withAttributes: attrs)
+            t += step
+        }
+    }
+
+    // MARK: Mouse and keys
+
+    override func resetCursorRects() {
+        guard duration > 0 else { return }
+        let tr = track
+        addCursorRect(NSRect(x: x(start) - handleW, y: tr.minY - 5, width: handleW, height: tr.height + 10), cursor: .resizeLeftRight)
+        addCursorRect(NSRect(x: x(end), y: tr.minY - 5, width: handleW, height: tr.height + 10), cursor: .resizeLeftRight)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        guard !isLocked, duration > 0 else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        let tr = track
+        let xs = x(start), xe = x(end)
+        let onHandleRow = p.y >= tr.minY - 10 && p.y <= tr.maxY + 10
+        let nearStart = onHandleRow && p.x >= xs - 22 && p.x <= xs + 2
+        let nearEnd = onHandleRow && p.x >= xe - 2 && p.x <= xe + 22
+        if nearStart && nearEnd {
+            drag = abs(p.x - xs) <= abs(p.x - xe) ? .start : .end
+        } else if nearStart {
+            drag = .start
+        } else if nearEnd {
+            drag = .end
+        } else {
+            drag = .playhead
+            onScrubBegin?()
+        }
+        apply(p.x)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard drag != .none else { return }
+        apply(convert(event.locationInWindow, from: nil).x)
+    }
+
+    override func mouseUp(with event: NSEvent) { drag = .none }
+
+    private func apply(_ px: CGFloat) {
+        let t = time(px)
+        let minLength = min(0.2, duration)
+        switch drag {
+        case .start:
+            start = min(max(0, t), end - minLength)
+            onTrim?(start, end)
+            onSeek?(start)
+        case .end:
+            end = max(min(duration, t), start + minLength)
+            onTrim?(start, end)
+            onSeek?(end)
+        case .playhead:
+            onSeek?(t)
+        case .none:
+            break
+        }
+        needsDisplay = true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 49: onToggle?()
+        case 123: onSeek?(max(0, playhead - 1.0 / 30))
+        case 124: onSeek?(min(duration, playhead + 1.0 / 30))
+        default: super.keyDown(with: event)
         }
     }
 }
