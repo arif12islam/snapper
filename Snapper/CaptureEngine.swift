@@ -204,7 +204,7 @@ final class CaptureCoordinator {
                 if let error = output.error {
                     Toast.show("Couldn\u{2019}t read the text (\(error)). Details in ~/Library/Logs/Snapper/ocr.log", on: result.screen, seconds: 6)
                 } else {
-                    Toast.show("No text found", on: result.screen)
+                    Toast.show(OCR.noTextMessage, on: result.screen)
                 }
             } else {
                 let pb = NSPasteboard.general
@@ -332,6 +332,11 @@ final class CaptureCoordinator {
 
     private func beginCapture() -> Bool {
         guard !isCapturing else { return false }
+        // Without Screen Recording access macOS hands back blank images, so explain instead of capturing.
+        guard CGPreflightScreenCaptureAccess() else {
+            WelcomePanel.showPermissionStep()
+            return false
+        }
         isCapturing = true
         iconsHidden = false
         if AppSettings.hideDesktopIcons {

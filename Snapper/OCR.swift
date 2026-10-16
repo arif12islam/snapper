@@ -27,6 +27,12 @@ enum OCR {
         }
     }
     private static let brokenKey = "ocrAccurateBrokenAt"
+
+    /// The fast model reads Latin-script text only. When the accurate model is not working on this Mac,
+    /// an empty result may just be text in another script, so the "no text" message says so.
+    static var noTextMessage: String {
+        accurate == .ready ? "No text found" : "No text found. Latin-script text only on this Mac for now"
+    }
     private static let probeQueue = DispatchQueue(label: "snapper.ocr.probe", qos: .utility)
 
     /// Loads the fast model right away, then probes the accurate one in the background (at most once a day

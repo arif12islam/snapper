@@ -22,7 +22,7 @@ enum AnnotationTool: String, CaseIterable {
         case .highlighter: return "highlighter"
         case .text: return "textformat"
         case .pixelate: return "square.grid.3x3.fill"
-        case .blur: return "drop"
+        case .blur: return "eye.slash"
         case .number: return "number.circle"
         case .callout: return "text.bubble"
         case .spotlight: return "flashlight.on.fill"
@@ -33,6 +33,7 @@ enum AnnotationTool: String, CaseIterable {
         switch self {
         case .number: return "Counter"
         case .rectangle: return "Shape"
+        case .blur: return "Redact"
         default: return rawValue.capitalized
         }
     }
@@ -50,7 +51,7 @@ enum AnnotationTool: String, CaseIterable {
         case .pencil: return "p"
         case .highlighter: return "h"
         case .text: return "t"
-        case .pixelate: return "x"
+        case .pixelate: return ""
         case .blur: return "b"
         case .number: return "n"
         case .callout: return ""
@@ -89,7 +90,7 @@ struct AnnotationStyle: Codable, Equatable {
     var ellipse: Bool = false   // Shape tool: ellipse instead of rectangle
     var magnify: CGFloat = 2.5  // magnifier zoom
     var magRound: Bool = true   // magnifier: round loupe (true) or rounded box
-    var smartShapes: Bool = true  // pen: turn clean strokes into shapes
+    var smartShapes: Bool = false  // pen: turn clean strokes into shapes
     var bubble: Bool = true     // text tool: speech-bubble box (true) or plain text (false)
     var effectMode: Int = 0     // blur: 0 smooth, 1 secure.  spotlight: 0 rectangle, 1 ellipse
 
@@ -120,7 +121,7 @@ struct AnnotationStyle: Codable, Equatable {
         shapeStyle = try c.decodeIfPresent(Int.self, forKey: .shapeStyle) ?? (filled ? 3 : 0)
         ellipse = try c.decodeIfPresent(Bool.self, forKey: .ellipse) ?? false
         magnify = try c.decodeIfPresent(CGFloat.self, forKey: .magnify) ?? 2.5
-        smartShapes = try c.decodeIfPresent(Bool.self, forKey: .smartShapes) ?? true
+        smartShapes = try c.decodeIfPresent(Bool.self, forKey: .smartShapes) ?? false
         magRound = try c.decodeIfPresent(Bool.self, forKey: .magRound) ?? true
     }
 }

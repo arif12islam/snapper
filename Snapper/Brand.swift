@@ -4,7 +4,7 @@ import SwiftUI
 /// Snapper's brand kit: name, colours, logo images and small reusable pieces.
 enum Brand {
     static let name = "Snapper"
-    static let tagline = "Capture, annotate, record, share."
+    static let tagline = "Capture, annotate, record."
     static let maker = "Bykorp"
     static let credit = "Built by Bykorp"
 

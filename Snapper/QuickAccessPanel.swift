@@ -340,7 +340,6 @@ final class QuickAccessPanel: NSObject {
             "S": { [weak self] in self?.save(askLocation: true) },
             "w": { [weak self] in self?.close(remember: true) },
             "e": { [weak self] in self?.edit() },
-            "u": { [weak self] in self?.upload() },
             "t": { [weak self] in self?.copyText() },
             "p": { [weak self] in self?.pin() }
         ]
@@ -473,7 +472,7 @@ final class QuickAccessPanel: NSObject {
             if towardEdge > 70 {
                 slideAway(toEdge: true)
                 close(remember: true)
-            } else if towardEdge < -70 {
+            } else if towardEdge < -70 && Features.swipeToSave {
                 save(askLocation: false)
                 if !AppSettings.closeAfterSave { snapBack() }
             } else {
@@ -615,7 +614,7 @@ final class QuickAccessPanel: NSObject {
             } else if let error = output.error {
                 Toast.show("Couldn\u{2019}t read the text (\(error)). Details in ~/Library/Logs/Snapper/ocr.log", on: target, seconds: 6)
             } else {
-                Toast.show("No text found", on: target)
+                Toast.show(OCR.noTextMessage, on: target)
             }
             scheduleAutoClose()
         }
@@ -744,7 +743,9 @@ private struct QuickAccessView: View {
                 iconButton("pin", help: "Pin to screen (⌘P)", action: onPin)
                 iconButton("text.viewfinder", help: "Copy text and QR codes (⌘T)", action: onText)
             }
-            iconButton("icloud.and.arrow.up", help: "Upload and copy link (⌘U). ⌥-click for password and expiry", action: onUpload)
+            if Features.cloudUpload {
+                iconButton("icloud.and.arrow.up", help: "Upload and copy link (⌘U). ⌥-click for password and expiry", action: onUpload)
+            }
         }
         .padding(5)
         .background(Capsule().fill(Color.black.opacity(0.62)))

@@ -363,6 +363,17 @@ enum MenuFactory {
         for i in items { menu.addItem(i) }
     }
 
+    /// Scrolling capture: a plain item for the alpha, with the Vertical and Horizontal submenu behind a switch.
+    static func scrollingItem(_ c: CaptureCoordinator, icons: Bool) -> NSMenuItem {
+        if Features.horizontalScroll {
+            return submenu("Scrolling Capture", symbol: "chevron.down.2", icons: icons, items: [
+                action("Vertical", hotkey: .scrolling) { c.captureScrolling(horizontal: false) },
+                action("Horizontal") { c.captureScrolling(horizontal: true) }
+            ])
+        }
+        return action("Scrolling Capture", symbol: "chevron.down.2", icons: icons, hotkey: .scrolling) { c.captureScrolling(horizontal: false) }
+    }
+
     // MARK: Capture and recording items (shared by the menu bar item and the File menu)
 
     static func screenshotItems(icons: Bool) -> [NSMenuItem] {
@@ -374,10 +385,7 @@ enum MenuFactory {
             action("Capture Area", symbol: "rectangle.dashed", icons: icons, hotkey: .captureArea) { c.captureArea() },
             action("Capture Window", symbol: "macwindow", icons: icons, hotkey: .captureWindow) { c.captureWindow() },
             action("Capture Previous Area", symbol: "clock.arrow.circlepath", icons: icons, hotkey: .capturePrevious) { c.capturePreviousArea() },
-            submenu("Scrolling Capture", symbol: "chevron.down.2", icons: icons, items: [
-                action("Vertical", hotkey: .scrolling) { c.captureScrolling(horizontal: false) },
-                action("Horizontal") { c.captureScrolling(horizontal: true) }
-            ]),
+            scrollingItem(c, icons: icons),
             submenu("Self-Timer", symbol: "timer", icons: icons, items: [
                 action("Area", hotkey: .selfTimer) { c.captureSelfTimer() },
                 action("Full Screen") { c.captureFullscreenTimer() }
@@ -468,6 +476,7 @@ enum MenuFactory {
         menu.addItem(login)
         menu.addItem(action("Settings…", symbol: "gearshape", icons: true, key: ",") { SettingsWindowController.show() })
         menu.addItem(action(Updater.menuTitle, symbol: "arrow.triangle.2.circlepath", icons: true) { Updater.menuAction() })
+        menu.addItem(action("Send Feedback…", symbol: "envelope", icons: true) { FeedbackWindow.show() })
         menu.addItem(action("About Snapper", symbol: "info.circle", icons: true) { AboutWindow.show() })
         menu.addItem(standard("Quit Snapper", #selector(NSApplication.terminate(_:)), key: "q"))
     }
@@ -501,22 +510,23 @@ enum MenuFactory {
         ])
 
         // File
-        _ = top("File", [
+        var fileItems: [NSMenuItem] = [
             command("Copy Image", "copy", key: "c", mods: [.command, .shift]),
             command("Save Image", "save", key: "s"),
             command("Save Image As…", "saveAs", key: "s", mods: [.command, .shift]),
-            command("Save Project…", "saveProject"),
-            command("Upload Image", "upload", key: "e"),
-            command("Pin to Screen", "pin", key: "p"),
-            command("Print…", "print", key: "p", mods: [.command, .shift]),
-            .separator(),
-            action("Open File…", key: "o", mods: [.command, .shift]) { openImageForAnnotate() },
-            action("Open From Clipboard", key: "v", mods: [.command, .shift]) { openFromClipboard() },
-            action("Open Project…") { AnnotateWindowController.openProjectPanel() },
-            recentSubmenu(icons: false, delegate: delegate),
-            .separator(),
-            standard("Close", #selector(NSWindow.performClose(_:)), key: "w")
-        ])
+            command("Save Project…", "saveProject")
+        ]
+        if Features.cloudUpload { fileItems.append(command("Upload Image", "upload", key: "e")) }
+        fileItems.append(command("Pin to Screen", "pin", key: "p"))
+        fileItems.append(command("Print…", "print", key: "p", mods: [.command, .shift]))
+        fileItems.append(.separator())
+        fileItems.append(action("Open File…", key: "o", mods: [.command, .shift]) { openImageForAnnotate() })
+        fileItems.append(action("Open From Clipboard", key: "v", mods: [.command, .shift]) { openFromClipboard() })
+        fileItems.append(action("Open Project…") { AnnotateWindowController.openProjectPanel() })
+        fileItems.append(recentSubmenu(icons: false, delegate: delegate))
+        fileItems.append(.separator())
+        fileItems.append(standard("Close", #selector(NSWindow.performClose(_:)), key: "w"))
+        _ = top("File", fileItems)
 
         // Edit
         _ = top("Edit", [
@@ -573,6 +583,7 @@ enum MenuFactory {
 
         // Help
         let help = top("Help", [
+            action("Send Feedback…") { FeedbackWindow.show() },
             action("Keyboard Shortcuts…") { SettingsWindowController.show(tab: "shortcuts") },
             action("Welcome") {
                 UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")

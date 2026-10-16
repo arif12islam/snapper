@@ -17,6 +17,7 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
     private let panel: NSPanel
     private let model = WelcomeModel()
     private var observer: NSObjectProtocol?
+    private var poll: Timer?
 
     static func showIfNeeded() {
         guard !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") else { return }
@@ -26,6 +27,20 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
         }
         let welcome = WelcomePanel()
         current = welcome
+        welcome.show()
+    }
+
+    /// Opens the guide at the permission step, whether or not first-run onboarding was finished.
+    static func showPermissionStep() {
+        let welcome: WelcomePanel
+        if let existing = current {
+            welcome = existing
+        } else {
+            welcome = WelcomePanel()
+            current = welcome
+        }
+        welcome.model.step = 1
+        welcome.model.hasPermission = CGPreflightScreenCaptureAccess()
         welcome.show()
     }
 
@@ -46,6 +61,15 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
         let hosting = NSHostingView(rootView: WelcomeView(model: model, onDone: { [weak self] in self?.dismiss() }))
         hosting.frame = NSRect(x: 0, y: 0, width: 520, height: 600)
         p.contentView = hosting
+
+        // Check once a second while the guide is open, so the step turns green the moment access is granted.
+        poll = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let granted = CGPreflightScreenCaptureAccess()
+                if self.model.hasPermission != granted { self.model.hasPermission = granted }
+            }
+        }
 
         // Coming back from System Settings: re-check the permission.
         observer = NotificationCenter.default.addObserver(
@@ -68,6 +92,8 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
             NotificationCenter.default.removeObserver(observer)
         }
         observer = nil
+        poll?.invalidate()
+        poll = nil
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         panel.orderOut(nil)
         Self.current = nil
@@ -81,6 +107,7 @@ final class WelcomePanel: NSObject, NSWindowDelegate {
 // MARK: - Views
 
 private struct WelcomeView: View {
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @ObservedObject var model: WelcomeModel
     let onDone: () -> Void
 
@@ -127,8 +154,8 @@ private struct WelcomeView: View {
                         "Grab an area, a window, the whole screen or a scrolling page. Pull text out of any image.")
                 feature("pencil.tip.crop.circle", "Annotate",
                         "Arrows, shapes, text, a magnifier, blur and backgrounds, all editable until you export.")
-                feature("record.circle", "Record and share",
-                        "Record the screen or a GIF, trim it, pin shots to your screen, upload and copy a link.")
+                feature("record.circle", "Record and edit",
+                        "Record the screen or a GIF, trim it, add smart zoom, and pin shots to your screen.")
             }
             .padding(.top, 14)
             .padding(.horizontal, 52)
@@ -146,7 +173,7 @@ private struct WelcomeView: View {
             Text(model.hasPermission ? "Screen recording is on" : "Allow screen recording")
                 .font(.system(size: 26, weight: .bold, design: .rounded))
             Text("macOS asks apps for permission before they can see the screen. "
-                 + "Snapper only looks when you capture or record, and nothing leaves your Mac unless you upload it.")
+                 + "Snapper only looks when you capture or record, and nothing leaves your Mac.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -210,6 +237,15 @@ private struct WelcomeView: View {
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08)))
             .padding(.horizontal, 48)
             .padding(.top, 6)
+
+            Toggle("Open Snapper when I log in", isOn: $launchAtLogin)
+                .toggleStyle(.switch)
+                .padding(.horizontal, 62)
+                .padding(.top, 4)
+                .onChange(of: launchAtLogin) { _, on in
+                    LaunchAtLogin.apply(on)
+                    LaunchAtLogin.syncPreference()
+                }
 
             Text("Change any shortcut in Settings, Shortcuts. Esc cancels a capture.")
                 .font(.caption)

@@ -263,7 +263,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate, NSToolbarDelegate
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.flexibleSpace, ToolbarID.copy, ToolbarID.reveal, ToolbarID.upload]
+        [.flexibleSpace, ToolbarID.copy, ToolbarID.reveal] + (Features.cloudUpload ? [ToolbarID.upload] : [])
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {

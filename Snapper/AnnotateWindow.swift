@@ -21,7 +21,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         [.select, .crop],
         [.arrow, .line, .rectangle, .pencil, .highlighter],
         [.text, .number, .magnifier],
-        [.spotlight, .pixelate, .blur]
+        [.spotlight, .blur]
     ]
 
     private enum StyleControl: CaseIterable { case color, stroke, fill, arrow, bubble, text, size, blur, spotlight, angle, crop, shapeKind, smart, zoom }
@@ -471,7 +471,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         smartCheck.action = #selector(styleChanged)
         smartCheck.controlSize = .small
         smartCheck.font = .systemFont(ofSize: 11)
-        smartCheck.state = .on
+        smartCheck.state = .off
         smartCheck.toolTip = "Turn clean pen strokes into lines, arrows, rectangles and ellipses"
         magSlider.target = self
         magSlider.action = #selector(styleChanged)
@@ -624,6 +624,17 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         if let data = UserDefaults.standard.data(forKey: "annotateToolStyles"),
            let dict = try? JSONDecoder().decode([String: AnnotationStyle].self, from: data) {
             for (k, v) in dict { if let t = AnnotationTool(rawValue: k) { result[t] = v } }
+        }
+        // Alpha defaults: shape recognition off, and Redact starts on its secure mode. Applied once.
+        if !UserDefaults.standard.bool(forKey: "alphaDefaultsApplied") {
+            for k in result.keys { result[k]?.smartShapes = false }
+            result[.blur]?.effectMode = 1
+            UserDefaults.standard.set(true, forKey: "alphaDefaultsApplied")
+        }
+        if result[.blur] == nil {
+            var s = AnnotationStyle()
+            s.effectMode = 1
+            result[.blur] = s
         }
         if result[.highlighter] == nil {
             var s = AnnotationStyle()

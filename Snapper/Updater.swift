@@ -1,4 +1,5 @@
 import AppKit
+import Security
 
 /// In-app updates. Snapper looks at a release feed, downloads the newer build, swaps itself in place and relaunches.
 ///
@@ -171,6 +172,34 @@ enum Updater {
         return nil
     }
 
+    // MARK: Signature check
+
+    nonisolated private static func staticCode(_ url: URL) -> SecStaticCode? {
+        var code: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess else { return nil }
+        return code
+    }
+
+    /// The signing certificate of the app at `url`, or nil for an ad-hoc signature.
+    nonisolated private static func leafCertificate(_ code: SecStaticCode) -> Data? {
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+              let dict = info as? [String: Any],
+              let certs = dict[kSecCodeInfoCertificates as String] as? [SecCertificate],
+              let leaf = certs.first else { return nil }
+        return SecCertificateCopyData(leaf) as Data
+    }
+
+    /// An update is only installed if its signature is intact and, when this app was signed with a
+    /// certificate, it was signed with the same one.
+    nonisolated private static func isTrustworthy(_ newApp: URL) -> Bool {
+        guard let new = staticCode(newApp),
+              SecStaticCodeCheckValidity(new, SecCSFlags(rawValue: kSecCSCheckAllArchitectures), nil) == errSecSuccess
+        else { return false }
+        guard let current = staticCode(Bundle.main.bundleURL), let mine = leafCertificate(current) else { return true }
+        return leafCertificate(new) == mine
+    }
+
     static func install(_ release: Release) async {
         guard !busy else { return }
         busy = true
@@ -194,6 +223,11 @@ enum Updater {
             guard let newApp else {
                 throw NSError(domain: "Updater", code: 2,
                               userInfo: [NSLocalizedDescriptionKey: "The download did not contain Snapper.app."])
+            }
+
+            guard await Task.detached(operation: { isTrustworthy(newApp) }).value else {
+                throw NSError(domain: "Updater", code: 3,
+                              userInfo: [NSLocalizedDescriptionKey: "The download is not signed by Snapper, so it was not installed."])
             }
 
             let dest = Bundle.main.bundleURL.path

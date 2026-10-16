@@ -12,14 +12,17 @@ final class SettingsRouter: ObservableObject {
 struct SettingsView: View {
     @ObservedObject private var router = SettingsRouter.shared
 
-    private let tabs: [(id: String, title: String, symbol: String)] = [
-        ("general", "General", "gearshape"),
-        ("capture", "Capture", "camera.viewfinder"),
-        ("quickaccess", "Quick Access", "rectangle.on.rectangle"),
-        ("recording", "Recording", "record.circle"),
-        ("cloud", "Cloud", "icloud"),
-        ("shortcuts", "Shortcuts", "keyboard")
-    ]
+    private var tabs: [(id: String, title: String, symbol: String)] {
+        var list: [(id: String, title: String, symbol: String)] = [
+            ("general", "General", "gearshape"),
+            ("capture", "Capture", "camera.viewfinder"),
+            ("quickaccess", "Quick Access", "rectangle.on.rectangle"),
+            ("recording", "Recording", "record.circle")
+        ]
+        if Features.cloudUpload { list.append(("cloud", "Cloud", "icloud")) }
+        list.append(("shortcuts", "Shortcuts", "keyboard"))
+        return list
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,7 +69,7 @@ private struct GeneralSettings: View {
     @AppStorage("saveAfterCapture") var saveAfterCapture = false
     @AppStorage("saveFolderPath") var saveFolderPath = ""
     @AppStorage("fileNameTemplate") var fileNameTemplate = "Snapper {date} at {time}"
-    @AppStorage("retentionDays") var retentionDays = 30.0
+    @AppStorage("retentionDays") var retentionDays = 7.0
     @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
 
     var body: some View {
@@ -234,7 +237,7 @@ private struct CaptureSettings: View {
 private struct QuickAccessSettings: View {
     @AppStorage("qaPosition") var qaPosition = 0
     @AppStorage("qaSize") var qaSize = 1
-    @AppStorage("autoClosePanel") var autoClosePanel = true
+    @AppStorage("autoClosePanel") var autoClosePanel = false
     @AppStorage("autoCloseSeconds") var autoCloseSeconds = 8.0
     @AppStorage("closeAfterCopy") var closeAfterCopy = true
     @AppStorage("closeAfterSave") var closeAfterSave = true
@@ -275,7 +278,7 @@ private struct RecordingSettings: View {
     @AppStorage("countdownSeconds") var countdownSeconds = 3
     @AppStorage("recordFPS") var recordFPS = 30
     @AppStorage("recordQuality") var recordQuality = 1
-    @AppStorage("recordResolution") var recordResolution = 0
+    @AppStorage("recordResolution") var recordResolution = 1
     @AppStorage("recordShowCursor") var recordShowCursor = true
     @AppStorage("editableCursor") var editableCursor = false
     @AppStorage("recordDoNotDisturb") var recordDoNotDisturb = false
@@ -321,10 +324,12 @@ private struct RecordingSettings: View {
                     .help("Records without the cursor and draws it in the video editor, where you can smooth it, resize it and add click effects.")
             }
             Section("While recording") {
-                Toggle("Turn on Do Not Disturb", isOn: $recordDoNotDisturb)
-                if recordDoNotDisturb {
-                    Text("Create two shortcuts in the Shortcuts app: \u{201C}\(FocusMode.onShortcut)\u{201D} (Set Focus: Do Not Disturb, On) and \u{201C}\(FocusMode.offShortcut)\u{201D} (Turn Off). macOS doesn't let apps change Focus directly.")
-                        .font(.caption).foregroundColor(.secondary)
+                if Features.doNotDisturb {
+                    Toggle("Turn on Do Not Disturb", isOn: $recordDoNotDisturb)
+                    if recordDoNotDisturb {
+                        Text("Create two shortcuts in the Shortcuts app: \u{201C}\(FocusMode.onShortcut)\u{201D} (Set Focus: Do Not Disturb, On) and \u{201C}\(FocusMode.offShortcut)\u{201D} (Turn Off). macOS doesn't let apps change Focus directly.")
+                            .font(.caption).foregroundColor(.secondary)
+                    }
                 }
                 Toggle("Hide desktop icons", isOn: $recordHideDesktopIcons)
             }

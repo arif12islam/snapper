@@ -21,7 +21,7 @@ enum AppSettings {
     static var saveAfterCapture: Bool { bool("saveAfterCapture", false) }
     static var playSound: Bool { bool("playSound", true) }
     static var fileNameTemplate: String { string("fileNameTemplate", "Snapper {date} at {time}") }
-    static var retentionDays: Double { double("retentionDays", 30) }
+    static var retentionDays: Double { double("retentionDays", 7) }
 
     // MARK: Capture
     static var hideDesktopIcons: Bool { bool("hideDesktopIcons", true) }
@@ -33,7 +33,7 @@ enum AppSettings {
     static var windowCaptureStyle: Int { int("windowCaptureStyle", 1) }
 
     // MARK: Quick Access
-    static var autoClosePanel: Bool { bool("autoClosePanel", true) }
+    static var autoClosePanel: Bool { bool("autoClosePanel", false) }
     static var autoCloseSeconds: Double { double("autoCloseSeconds", 8) }
     /// 0 bottom-right, 1 bottom-left, 2 top-right, 3 top-left.
     static var qaPosition: Int { int("qaPosition", 0) }
@@ -54,11 +54,11 @@ enum AppSettings {
     /// 0 low, 1 medium, 2 high.
     static var recordQuality: Int { int("recordQuality", 1) }
     /// 0 native, 1 at most 1080p, 2 at most 720p.
-    static var recordResolution: Int { int("recordResolution", 0) }
+    static var recordResolution: Int { int("recordResolution", 1) }
     static var recordShowCursor: Bool { bool("recordShowCursor", true) }
     /// Record without the cursor and draw it in the video editor (smooth cursor, cursor size, click effects).
     static var editableCursor: Bool { bool("editableCursor", false) }
-    static var recordDoNotDisturb: Bool { bool("recordDoNotDisturb", false) }
+    static var recordDoNotDisturb: Bool { Features.doNotDisturb && bool("recordDoNotDisturb", false) }
     static var recordHideDesktopIcons: Bool { bool("recordHideDesktopIcons", false) }
 
     static var clickColor: String { string("clickColor", "#FFCC00") }
