@@ -159,7 +159,7 @@ struct BackgroundPanelView: View {
             Image(nsImage: BackgroundMaker.thumbnail(fill))
                 .overlay(
                     RoundedRectangle(cornerRadius: 7)
-                        .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2.5)
+                        .strokeBorder(selected ? Color.brand : Color.clear, lineWidth: 2.5)
                         .padding(-2)
                 )
         }
@@ -182,7 +182,7 @@ struct BackgroundPanelView: View {
                         let index = row * 3 + col
                         Button(action: { model.settings.alignment = index }) {
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(model.settings.alignment == index ? Color.accentColor : Color.secondary.opacity(0.25))
+                                .fill(model.settings.alignment == index ? Color.brand : Color.secondary.opacity(0.25))
                                 .frame(width: 22, height: 15)
                         }
                         .buttonStyle(.plain)

@@ -450,20 +450,19 @@ enum BackgroundMaker {
         let r = radius(s, contentSize: contentSize) * scale
         let path = CGPath(roundedRect: rect, cornerWidth: r, cornerHeight: r, transform: nil)
         let sh = shadowParams(s, contentSize: contentSize)
+        // The shadow is cast by the clipped picture itself (a transparency layer), not by a filled rectangle:
+        // window captures have transparent rounded corners, and a white plate behind them showed through.
+        ctx.saveGState()
         if sh.alpha > 0 {
-            ctx.saveGState()
             // Shadow offsets are in device space (y up), so negative = downward.
             ctx.setShadow(offset: CGSize(width: 0, height: -sh.offset * scale), blur: sh.blur * scale,
                           color: NSColor.black.withAlphaComponent(sh.alpha).cgColor)
-            ctx.addPath(path)
-            ctx.setFillColor(NSColor.white.cgColor)
-            ctx.fillPath()
-            ctx.restoreGState()
         }
-        ctx.saveGState()
+        ctx.beginTransparencyLayer(auxiliaryInfo: nil)
         ctx.addPath(path)
         ctx.clip()
         AnnotationRenderer.drawImage(ctx, image, in: rect)
+        ctx.endTransparencyLayer()
         ctx.restoreGState()
     }
 

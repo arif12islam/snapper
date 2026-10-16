@@ -253,6 +253,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         seg.segmentCount = images.count
         seg.trackingMode = .selectOne
         seg.controlSize = .small
+        seg.selectedSegmentBezelColor = Brand.accent
         seg.target = self
         seg.action = #selector(styleChanged)
         for (i, img) in images.enumerated() {

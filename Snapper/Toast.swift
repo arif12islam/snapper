@@ -53,7 +53,7 @@ enum Toast {
         current?.orderOut(nil)
         let (k, sym) = style(for: message, kind: kind, symbol: symbol)
 
-        let font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        let font = NSFont.systemFont(ofSize: 13, weight: .semibold)
         let lineH = ceil(font.ascender - font.descender + font.leading)
         let maxText = min(420, target.visibleFrame.width - 140)
         let measured = NSAttributedString(string: message, attributes: [.font: font])

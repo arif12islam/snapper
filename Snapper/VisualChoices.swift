@@ -44,11 +44,11 @@ struct TilePicker<V: Hashable>: View {
                 c.art
                     .frame(width: tile.width - 16, height: tile.height - 12)
                     .frame(width: tile.width, height: tile.height)
-                    .foregroundColor(on ? .accentColor : .secondary)
+                    .foregroundColor(on ? .brand : .secondary)
                     .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(on ? Color.accentColor.opacity(0.13) : Color(nsColor: .controlBackgroundColor)))
+                        .fill(on ? Color.brand.opacity(0.13) : Color(nsColor: .controlBackgroundColor)))
                     .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: on ? 2 : 1))
+                        .strokeBorder(on ? Color.brand : Color.primary.opacity(0.12), lineWidth: on ? 2 : 1))
                 Text(c.label)
                     .font(.system(size: 10, weight: on ? .semibold : .regular))
                     .foregroundColor(on ? .primary : .secondary)
@@ -238,6 +238,7 @@ final class ImageSegments: NSSegmentedControl {
         segmentCount = images.count
         trackingMode = .selectOne
         controlSize = .small
+        selectedSegmentBezelColor = Brand.accent
         for (i, image) in images.enumerated() {
             setImage(image, forSegment: i)
             setImageScaling(.scaleNone, forSegment: i)
@@ -390,7 +391,7 @@ struct PositionPad: View {
                 let on = slot.value == selection
                 Button { selection = slot.value } label: {
                     shape
-                        .fill(on ? Color.accentColor : Color.primary.opacity(0.12))
+                        .fill(on ? Color.brand : Color.primary.opacity(0.12))
                         .frame(width: round ? block.height : block.width, height: block.height)
                         .padding(4)
                         .contentShape(Rectangle())
@@ -426,6 +427,7 @@ struct Segments<V: Hashable>: View {
         .pickerStyle(.segmented)
         .labelsHidden()
         .fixedSize()
+        .tint(.brand)
     }
 }
 
@@ -443,12 +445,12 @@ struct PreviewPicker<V: Hashable>: View {
                 Button { selection = item.value } label: {
                     item.art
                         .frame(width: size.width - 8, height: size.height - 8)
-                        .foregroundColor(on ? .accentColor : .secondary)
+                        .foregroundColor(on ? .brand : .secondary)
                         .frame(width: size.width, height: size.height)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor)))
+                            .fill(on ? Color.brand.opacity(0.12) : Color(nsColor: .controlBackgroundColor)))
                         .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: on ? 2 : 1))
+                            .strokeBorder(on ? Color.brand : Color.primary.opacity(0.12), lineWidth: on ? 2.5 : 1))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -456,4 +458,9 @@ struct PreviewPicker<V: Hashable>: View {
             }
         }
     }
+}
+
+extension Color {
+    /// Snapper's accent: logo navy in light mode, periwinkle in dark mode.
+    static let brand = Color(nsColor: Brand.accent)
 }

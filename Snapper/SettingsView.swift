@@ -27,13 +27,13 @@ struct SettingsView: View {
                 ForEach(tabs, id: \.id) { t in
                     Button { router.tab = t.id } label: {
                         VStack(spacing: 3) {
-                            Image(systemName: t.symbol).font(.system(size: 15, weight: .regular))
-                            Text(t.title).font(.system(size: 10.5, weight: router.tab == t.id ? .semibold : .regular))
+                            Image(systemName: t.symbol).font(.system(size: 15, weight: .semibold))
+                            Text(t.title).font(.system(size: 10.5, weight: router.tab == t.id ? .bold : .medium))
                         }
-                        .frame(width: 78, height: 44)
-                        .foregroundColor(router.tab == t.id ? Color(nsColor: Brand.accent) : .secondary)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(router.tab == t.id ? Color.primary.opacity(0.08) : Color.clear))
+                        .frame(width: 78, height: 46)
+                        .foregroundColor(router.tab == t.id ? .white : .secondary)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(router.tab == t.id ? Color.brand : Color.clear))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -202,7 +202,7 @@ private struct CaptureSettings: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(on ? Color.accentColor : Color.clear, lineWidth: 2).padding(-3))
+                    .strokeBorder(on ? Color.brand : Color.clear, lineWidth: 2).padding(-3))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

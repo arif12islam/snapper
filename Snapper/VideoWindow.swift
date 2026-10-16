@@ -165,8 +165,8 @@ final class VideoWindowController: NSObject, NSWindowDelegate, NSToolbarDelegate
         playButton.action = #selector(togglePlayAction)
         playButton.toolTip = "Play or pause (space)"
         playButton.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        timeLabel.font = .monospacedDigitSystemFont(ofSize: 11.5, weight: .medium)
-        timeLabel.textColor = .secondaryLabelColor
+        timeLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .bold)
+        timeLabel.textColor = .labelColor
 
         cancelButton.bezelStyle = .rounded
         cancelButton.controlSize = .small
@@ -621,6 +621,7 @@ private struct VideoEditSidebar: View {
             .padding(16)
         }
         .disabled(model.busy)
+        .tint(.brand)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -647,9 +648,9 @@ private struct VideoEditSidebar: View {
             HStack(spacing: 8) {
                 Button { model.onExportMP4?() } label: {
                     Label("MP4", systemImage: "film")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity).frame(height: 30)
+                        .frame(maxWidth: .infinity).frame(height: 34)
                         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(navy))
                         .contentShape(Rectangle())
                 }
@@ -657,9 +658,9 @@ private struct VideoEditSidebar: View {
                 .help("Export as MP4")
                 Button { model.onExportGIF?() } label: {
                     Label("GIF", systemImage: "sparkles")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity).frame(height: 30)
+                        .frame(maxWidth: .infinity).frame(height: 34)
                         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
                         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
                         .contentShape(Rectangle())
@@ -674,8 +675,8 @@ private struct VideoEditSidebar: View {
         let m = Int(max(0, seconds)) / 60
         let text = String(format: "%02d:%04.1f", m, max(0, seconds) - Double(m * 60))
         return VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.system(size: 9, weight: .semibold)).tracking(0.6).foregroundColor(.secondary)
-            Text(text).font(.system(size: 12, weight: .semibold)).monospacedDigit()
+            Text(title).font(.system(size: 9.5, weight: .bold)).tracking(0.8).foregroundColor(.secondary)
+            Text(text).font(.system(size: 16, weight: .bold, design: .rounded)).monospacedDigit()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.leading, 12)
@@ -740,7 +741,7 @@ private struct VideoEditSidebar: View {
             }
             .frame(width: swatch, height: swatch)
             .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2).padding(-3))
+                .strokeBorder(selected ? Color.brand : Color.clear, lineWidth: 2.5).padding(-3))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -760,10 +761,10 @@ private struct VideoEditSidebar: View {
                     Button { model.settings.format = f } label: {
                         AspectArt(ratio: f.aspect.ratio)
                             .frame(width: 26, height: 20)
-                            .foregroundColor(on ? .accentColor : .secondary)
-                            .frame(maxWidth: .infinity).frame(height: 36)
-                            .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(on ? Color.accentColor.opacity(0.12) : Color.clear))
+                            .foregroundColor(on ? .white : .secondary)
+                            .frame(maxWidth: .infinity).frame(height: 38)
+                            .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(on ? Color.brand : Color.primary.opacity(0.05)))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -815,7 +816,7 @@ private struct VideoEditSidebar: View {
 
     private func header<Accessory: View>(_ title: String, @ViewBuilder accessory: () -> Accessory) -> some View {
         HStack {
-            Text(title).font(.system(size: 12, weight: .semibold)).foregroundColor(.secondary)
+            Text(title).font(.system(size: 13, weight: .bold))
             Spacer()
             accessory()
         }
