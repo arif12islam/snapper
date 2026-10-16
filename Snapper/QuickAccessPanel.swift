@@ -612,6 +612,8 @@ final class QuickAccessPanel: NSObject {
                 pb.setString(combined, forType: .string)
                 let what = output.codes.isEmpty ? "\(output.text.count) characters" : "text and \(output.codes.count) code(s)"
                 Toast.show("Copied \(what)", on: target)
+            } else if let error = output.error {
+                Toast.show("Couldn\u{2019}t read the text (\(error)). Details in ~/Library/Logs/Snapper/ocr.log", on: target, seconds: 6)
             } else {
                 Toast.show("No text found", on: target)
             }

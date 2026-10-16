@@ -1,5 +1,6 @@
 import AppKit
 import Vision
+import CoreML
 
 enum OCR {
     struct Output {
@@ -65,38 +66,59 @@ enum OCR {
 
     // MARK: Text
 
+    /// One recognition attempt per strategy, stopping at the first that works. The default path runs on the
+    /// Neural Engine; when that cannot start (CRImageReaderError, "could not create inference context") the
+    /// same request runs on the CPU, and as a last resort in fast mode.
     private static func read(_ image: CGImage, languages: [String], detect: Bool) -> (lines: [String], error: String?) {
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        // Screenshots are full of code, URLs and names, which "correction" tends to mangle, and it is slower.
-        request.usesLanguageCorrection = false
-        if detect {
-            request.automaticallyDetectsLanguage = true
-        } else if !languages.isEmpty {
-            request.recognitionLanguages = languages
-        }
-
-        // Some captures make Vision's reader fail (CRImageReaderError), so try other ways of handing it the pixels.
-        var handlers: [() -> VNImageRequestHandler?] = [
-            { VNImageRequestHandler(cgImage: image, options: [:]) },
-            { VNImageRequestHandler(ciImage: CIImage(cgImage: image), options: [:]) },
-            {
-                guard let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return nil }
-                return VNImageRequestHandler(data: png, options: [:])
-            }
-        ]
+        let attempts: [(level: VNRequestTextRecognitionLevel, cpu: Bool)] = [(.accurate, false), (.accurate, true), (.fast, true)]
         var lastError: String?
-        while !handlers.isEmpty {
-            guard let handler = handlers.removeFirst()() else { continue }
+        for attempt in attempts {
+            let started = Date()
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = attempt.level
+            // Screenshots are full of code, URLs and names, which "correction" tends to mangle, and it is slower.
+            request.usesLanguageCorrection = false
+            if detect {
+                request.automaticallyDetectsLanguage = true
+            } else if !languages.isEmpty, attempt.level == .accurate {
+                request.recognitionLanguages = languages
+            }
+            if attempt.cpu, let cpu = MLComputeDevice.allComputeDevices.first(where: {
+                if case .cpu = $0 { return true } else { return false }
+            }) {
+                request.setComputeDevice(cpu, for: .main)
+            }
             do {
-                try handler.perform([request])
+                try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+                log("ok \(attempt.level == .fast ? "fast" : "accurate")\(attempt.cpu ? " cpu" : "") \(image.width)x\(image.height) in \(ms(started)) ms")
                 return (readingOrder(request.results ?? []), nil)
             } catch {
-                NSLog("Snapper OCR: \(error)")
-                lastError = error.localizedDescription
+                let e = error as NSError
+                lastError = "\(e.domain) \(e.code)"
+                log("fail \(attempt.level == .fast ? "fast" : "accurate")\(attempt.cpu ? " cpu" : "") \(image.width)x\(image.height) in \(ms(started)) ms: \(e.domain) \(e.code) \(e.userInfo)")
             }
         }
         return ([], lastError)
+    }
+
+    private static func ms(_ since: Date) -> Int { Int(Date().timeIntervalSince(since) * 1000) }
+
+    /// ~/Library/Logs/Snapper/ocr.log, so a failure can be diagnosed.
+    static let logURL: URL = {
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Snapper", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("ocr.log")
+    }()
+
+    private static func log(_ line: String) {
+        NSLog("Snapper OCR: \(line)")
+        let text = "\(ISO8601DateFormatter().string(from: Date())) \(line)\n"
+        guard let data = text.data(using: .utf8) else { return }
+        if let h = try? FileHandle(forWritingTo: logURL) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        } else {
+            try? data.write(to: logURL)
+        }
     }
 
     /// English first, plus the user's own languages when Vision supports them.

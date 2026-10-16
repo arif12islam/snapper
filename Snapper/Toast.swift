@@ -67,7 +67,7 @@ enum Toast {
 
         // Measure the text; long messages wrap onto a second line.
         let font = NSFont.systemFont(ofSize: 14, weight: .semibold)
-        let lineH = ceil(font.boundingRectForFont.height)
+        let lineH = ceil(font.ascender - font.descender + font.leading)
         let maxText = min(460, target.visibleFrame.width - 160)
         let measured = NSAttributedString(string: message, attributes: [.font: font])
             .boundingRect(with: NSSize(width: maxText, height: 1000), options: [.usesLineFragmentOrigin, .usesFontLeading])

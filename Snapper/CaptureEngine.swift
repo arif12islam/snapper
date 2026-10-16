@@ -202,7 +202,7 @@ final class CaptureCoordinator {
             let combined = ([output.text] + output.codes).filter { !$0.isEmpty }.joined(separator: "\n")
             if combined.isEmpty {
                 if let error = output.error {
-                    Toast.show("Text recognition failed: \(error)", on: result.screen, seconds: 4)
+                    Toast.show("Couldn\u{2019}t read the text (\(error)). Details in ~/Library/Logs/Snapper/ocr.log", on: result.screen, seconds: 6)
                 } else {
                     Toast.show("No text found", on: result.screen)
                 }
