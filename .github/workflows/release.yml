@@ -39,7 +39,13 @@ jobs:
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
 
       - name: Build
-        run: ./build.sh --release
+        run: |
+          set +e
+          ./build.sh --release 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          # Surface compiler errors as annotations, so they are readable without the raw log.
+          grep -E "error:" build.log | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+          exit $status
 
       - name: Publish release
         env:
