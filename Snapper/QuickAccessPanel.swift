@@ -747,17 +747,17 @@ private struct QuickAccessView: View {
             iconButton("icloud.and.arrow.up", help: "Upload and copy link (⌘U). ⌥-click for password and expiry", action: onUpload)
         }
         .padding(5)
-        .background(Capsule().fill(Color.black.opacity(0.5)))
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5))
+        .background(Capsule().fill(Color.black.opacity(0.62)))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5))
     }
 
     private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
-                .frame(width: 29, height: 29)
-                .background(Circle().fill(Color.white.opacity(0.14)))
+                .frame(width: 31, height: 31)
+                .background(Circle().fill(Color.white.opacity(0.18)))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

@@ -80,10 +80,10 @@ enum AnnotationTool: String, CaseIterable {
 
 struct AnnotationStyle: Codable, Equatable {
     var colorHex: String = "#FF3B30"
-    var lineWidth: CGFloat = 4
+    var lineWidth: CGFloat = 6
     var fontSize: CGFloat = 28
     var arrowStyle: Int = 0     // 0 tapered, 1 open, 2 classic filled, 3 double-ended, 4 curved
-    var textStyle: Int = 0      // 0 plain, 1 bold, 2 outlined, 3 highlight, 4 boxed, 5 dark pill, 6 handwritten
+    var textStyle: Int = 1      // 0 plain, 1 bold, 2 outlined, 3 highlight, 4 boxed, 5 dark pill, 6 handwritten
     var filled: Bool = false    // derived from shapeStyle (kept for older project files)
     var shapeStyle: Int = 0 { didSet { filled = shapeStyle >= 2 } }   // 0 rounded outline, 1 sharp outline, 2 tinted, 3 solid
     var ellipse: Bool = false   // Shape tool: ellipse instead of rectangle

@@ -66,11 +66,12 @@ final class RecordingControls: NSObject {
         dot.toolTip = "Snapper is recording"
         dot.frame = NSRect(x: 16, y: 14.5, width: 9, height: 9)
 
-        timeLabel.font = .monospacedDigitSystemFont(ofSize: 14, weight: .medium)
+        timeLabel.font = .monospacedDigitSystemFont(ofSize: 15, weight: .bold)
         timeLabel.textColor = .labelColor
         timeLabel.frame = NSRect(x: 32, y: 9, width: 52, height: 20)
 
         pauseButton.image = NSImage(systemSymbolName: "pause.fill", accessibilityDescription: "Pause")
+        pauseButton.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 15, weight: .bold)
         pauseButton.isBordered = false
         pauseButton.contentTintColor = .labelColor
         pauseButton.target = self
@@ -82,7 +83,7 @@ final class RecordingControls: NSObject {
         stop.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "Stop")
         stop.isBordered = false
         stop.contentTintColor = .systemRed
-        stop.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+        stop.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
         stop.target = self
         stop.action = #selector(stopTapped)
         stop.frame = NSRect(x: size.width - 44, y: 3, width: 36, height: 32)

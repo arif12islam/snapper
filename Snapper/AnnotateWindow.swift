@@ -184,7 +184,9 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     @discardableResult
     private func iconButton(_ button: NSButton, symbol: String, tooltip: String, action: Selector) -> NSButton {
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold))
+        button.contentTintColor = .labelColor
         button.bezelStyle = .texturedRounded
         button.isBordered = false
         button.toolTip = tooltip
@@ -199,7 +201,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     /// A small symbol in place of a word label; the name is its tooltip.
     private func glyph(_ symbol: String, _ tip: String) -> NSView {
         let v = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tip)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)) ?? NSImage())
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)) ?? NSImage())
         v.contentTintColor = .secondaryLabelColor
         v.toolTip = tip
         v.setContentHuggingPriority(.required, for: .horizontal)
@@ -244,9 +246,9 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         return box
     }
 
-    private static func symbol(_ name: String, _ weight: NSFont.Weight = .regular) -> NSImage {
+    private static func symbol(_ name: String, _ weight: NSFont.Weight = .semibold) -> NSImage {
         let img = NSImage(systemSymbolName: name, accessibilityDescription: nil) ?? NSImage()
-        return img.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: weight)) ?? img
+        return img.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: weight)) ?? img
     }
 
     private func configure(_ seg: NSSegmentedControl, images: [NSImage], tips: [String]) {
@@ -1089,8 +1091,10 @@ final class ToolGroup: NSStackView {
     var selectedSegment: Int = -1 {
         didSet {
             for (i, b) in buttons.enumerated() {
-                b.layer?.backgroundColor = i == selectedSegment
-                    ? NSColor.labelColor.withAlphaComponent(0.12).cgColor : NSColor.clear.cgColor
+                let on = i == selectedSegment
+                // The active tool is a solid brand tile with a white glyph: unmistakable at a glance.
+                b.layer?.backgroundColor = on ? Brand.accent.cgColor : NSColor.clear.cgColor
+                b.contentTintColor = on ? .white : .labelColor
             }
         }
     }
@@ -1102,7 +1106,8 @@ final class ToolGroup: NSStackView {
         edgeInsets = NSEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)
         for (i, image) in images.enumerated() {
             let b = NSButton()
-            b.image = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)) ?? image
+            b.image = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)) ?? image
+            b.contentTintColor = .labelColor
             b.isBordered = false
             b.imagePosition = .imageOnly
             b.toolTip = tips[i]
@@ -1110,10 +1115,11 @@ final class ToolGroup: NSStackView {
             b.target = self
             b.action = #selector(tapped(_:))
             b.wantsLayer = true
-            b.layer?.cornerRadius = 7
+            b.layer?.cornerRadius = 8
+            b.layer?.cornerCurve = .continuous
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 32).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 28).isActive = true
             buttons.append(b)
             addArrangedSubview(b)
         }

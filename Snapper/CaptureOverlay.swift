@@ -676,7 +676,8 @@ private final class AllInOneToolbar: NSObject, NSTextFieldDelegate {
         var views: [NSView] = []
         for (i, entry) in Self.actions.enumerated() {
             let b = NSButton()
-            b.image = NSImage(systemSymbolName: entry.1, accessibilityDescription: entry.2)
+            b.image = NSImage(systemSymbolName: entry.1, accessibilityDescription: entry.2)?
+                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold))
             b.isBordered = false
             b.imagePosition = .imageOnly
             b.contentTintColor = .labelColor
@@ -684,7 +685,16 @@ private final class AllInOneToolbar: NSObject, NSTextFieldDelegate {
             b.tag = i
             b.target = self
             b.action = #selector(actionTapped(_:))
-            b.widthAnchor.constraint(equalToConstant: 28).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
+            if entry.0 == .screenshot {
+                // The default action (Return) is the one solid button.
+                b.wantsLayer = true
+                b.layer?.backgroundColor = Brand.accent.cgColor
+                b.layer?.cornerRadius = 7
+                b.layer?.cornerCurve = .continuous
+                b.contentTintColor = .white
+            }
             views.append(b)
         }
         let sep = NSBox()
@@ -692,7 +702,7 @@ private final class AllInOneToolbar: NSObject, NSTextFieldDelegate {
         views.append(sep)
 
         for f in [widthField, heightField] {
-            f.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+            f.font = .monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
             f.alignment = .center
             f.delegate = self
             f.widthAnchor.constraint(equalToConstant: 46).isActive = true
