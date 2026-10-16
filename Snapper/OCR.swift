@@ -11,24 +11,56 @@ enum OCR {
 
     private static let queue = DispatchQueue(label: "snapper.ocr", qos: .userInitiated, attributes: .concurrent)
 
-    /// Loads the text model once at launch, so the first real capture does not pay for it.
-    static func warmUp() {
-        queue.async {
-            let size = CGSize(width: 320, height: 64)
-            guard let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8,
-                                      bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
-            else { return }
-            ctx.setFillColor(NSColor.white.cgColor)
-            ctx.fill(CGRect(origin: .zero, size: size))
-            let gc = NSGraphicsContext(cgContext: ctx, flipped: false)
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = gc
-            NSString(string: "Snapper reads text 0123").draw(at: NSPoint(x: 12, y: 20), withAttributes: [
-                .font: NSFont.systemFont(ofSize: 28), .foregroundColor: NSColor.black])
-            NSGraphicsContext.restoreGraphicsState()
-            if let img = ctx.makeImage() { _ = read(img, languages: ["en-US"], detect: false) }
+    // Vision's "accurate" text model can be broken on a Mac: on some systems it hangs for a minute while loading
+    // and then fails (CRImageReaderError 1) on every request, even on the CPU, while the "fast" model works in
+    // milliseconds. So captures use fast mode until accurate has proven itself, and a background probe at launch
+    // checks accurate without ever making the user wait for it.
+    private enum Accurate { case unknown, ready, broken }
+    private static let stateLock = NSLock()
+    private static var _accurate: Accurate = .unknown
+    private static var accurate: Accurate {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _accurate }
+        set {
+            stateLock.lock(); _accurate = newValue; stateLock.unlock()
+            if newValue == .broken { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: brokenKey) }
+            if newValue == .ready { UserDefaults.standard.removeObject(forKey: brokenKey) }
         }
+    }
+    private static let brokenKey = "ocrAccurateBrokenAt"
+    private static let probeQueue = DispatchQueue(label: "snapper.ocr.probe", qos: .utility)
+
+    /// Loads the fast model right away, then probes the accurate one in the background (at most once a day
+    /// when it was broken last time).
+    static func warmUp() {
+        let brokenAt = UserDefaults.standard.double(forKey: brokenKey)
+        let recentlyBroken = brokenAt > 0 && Date().timeIntervalSince1970 - brokenAt < 24 * 3600
+        if recentlyBroken { _accurate = .broken }
+        queue.async {
+            guard let img = sampleImage() else { return }
+            _ = read(img, languages: [], detect: false, levels: [.fast])
+            guard !recentlyBroken else { return }
+            probeQueue.async {
+                let probe = read(img, languages: ["en-US"], detect: false, levels: [.accurate])
+                accurate = probe.error == nil ? .ready : .broken
+            }
+        }
+    }
+
+    private static func sampleImage() -> CGImage? {
+        let size = CGSize(width: 320, height: 64)
+        guard let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return nil }
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fill(CGRect(origin: .zero, size: size))
+        let gc = NSGraphicsContext(cgContext: ctx, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = gc
+        NSString(string: "Snapper reads text 0123").draw(at: NSPoint(x: 12, y: 20), withAttributes: [
+            .font: NSFont.systemFont(ofSize: 28), .foregroundColor: NSColor.black])
+        NSGraphicsContext.restoreGraphicsState()
+        return ctx.makeImage()
     }
 
     /// Recognises text and QR/barcodes at the same time. Text uses a fixed language list (language detection is
@@ -44,8 +76,12 @@ enum OCR {
             group.enter()
             queue.async {
                 let prepared = prepare(image)
-                var result = read(prepared, languages: languages(), detect: false)
-                if result.lines.isEmpty, result.error == nil { result = read(prepared, languages: [], detect: true) }
+                let useAccurate = accurate == .ready
+                var result = read(prepared, languages: useAccurate ? languages() : [], detect: false,
+                                  levels: useAccurate ? [.accurate, .fast] : [.fast])
+                if useAccurate, result.lines.isEmpty, result.error == nil {
+                    result = read(prepared, languages: [], detect: true, levels: [.accurate])
+                }
                 lock.lock(); lines = result.lines; failure = result.error; lock.unlock()
                 group.leave()
             }
@@ -66,36 +102,38 @@ enum OCR {
 
     // MARK: Text
 
-    /// Runs on the CPU from the start. On this setup the Neural Engine path fails slowly (CRImageReaderError)
-    /// before anything else is tried, while the CPU path is instant once its model is loaded, which warmUp()
-    /// does at launch. Fast mode on the CPU is the last resort.
-    private static func read(_ image: CGImage, languages: [String], detect: Bool) -> (lines: [String], error: String?) {
-        let attempts: [(level: VNRequestTextRecognitionLevel, cpu: Bool)] = [(.accurate, true), (.fast, true)]
+    /// Tries each recognition level in turn on the CPU, stopping at the first that works.
+    private static func read(_ image: CGImage, languages: [String], detect: Bool,
+                             levels: [VNRequestTextRecognitionLevel]) -> (lines: [String], error: String?) {
         var lastError: String?
-        for attempt in attempts {
+        for level in levels {
             let started = Date()
+            let name = level == .fast ? "fast" : "accurate"
             let request = VNRecognizeTextRequest()
-            request.recognitionLevel = attempt.level
+            request.recognitionLevel = level
             // Screenshots are full of code, URLs and names, which "correction" tends to mangle, and it is slower.
             request.usesLanguageCorrection = false
-            if detect {
-                request.automaticallyDetectsLanguage = true
-            } else if !languages.isEmpty, attempt.level == .accurate {
-                request.recognitionLanguages = languages
+            if level == .accurate {
+                if detect {
+                    request.automaticallyDetectsLanguage = true
+                } else if !languages.isEmpty {
+                    request.recognitionLanguages = languages
+                }
             }
-            if attempt.cpu, let cpu = MLComputeDevice.allComputeDevices.first(where: {
+            if let cpu = MLComputeDevice.allComputeDevices.first(where: {
                 if case .cpu = $0 { return true } else { return false }
             }) {
                 request.setComputeDevice(cpu, for: .main)
             }
             do {
                 try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
-                log("ok \(attempt.level == .fast ? "fast" : "accurate")\(attempt.cpu ? " cpu" : "") \(image.width)x\(image.height) in \(ms(started)) ms")
+                log("ok \(name) \(image.width)x\(image.height) in \(ms(started)) ms")
                 return (readingOrder(request.results ?? []), nil)
             } catch {
                 let e = error as NSError
                 lastError = "\(e.domain) \(e.code)"
-                log("fail \(attempt.level == .fast ? "fast" : "accurate")\(attempt.cpu ? " cpu" : "") \(image.width)x\(image.height) in \(ms(started)) ms: \(e.domain) \(e.code) \(e.userInfo)")
+                log("fail \(name) \(image.width)x\(image.height) in \(ms(started)) ms: \(e.domain) \(e.code) \(e.userInfo)")
+                if level == .accurate { accurate = .broken }
             }
         }
         return ([], lastError)

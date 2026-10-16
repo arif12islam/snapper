@@ -131,18 +131,42 @@ final class RecordingWriter: @unchecked Sendable {
     func appendSystemAudio(_ sample: CMSampleBuffer) { appendAudio(sample, to: systemAudioInput) }
     func appendMic(_ sample: CMSampleBuffer) { appendAudio(sample, to: micInput) }
 
+    /// Per audio track: where the last appended buffer ended, and the format the track started with.
+    private var audioEnd: [ObjectIdentifier: CMTime] = [:]
+    private var audioFormat: [ObjectIdentifier: (Float64, UInt32)] = [:]
+
     private func appendAudio(_ sample: CMSampleBuffer, to input: AVAssetWriterInput?) {
         guard !failed, sessionStarted, !paused, !waitingForVideoAfterResume, writer.status == .writing,
               let input, input.isReadyForMoreMediaData,
               CMSampleBufferIsValid(sample), CMSampleBufferGetNumSamples(sample) > 0 else { return }
         let pts = CMSampleBufferGetPresentationTimeStamp(sample)
         if pts < startTime { return }
+        let key = ObjectIdentifier(input)
+
+        // A change of sample rate or channel count mid-recording (switching headphones, a Bluetooth device
+        // dropping to call quality) makes the AAC encoder fail and the whole file with it: skip those buffers.
+        if let desc = CMSampleBufferGetFormatDescription(sample),
+           let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(desc)?.pointee {
+            let format = (asbd.mSampleRate, asbd.mChannelsPerFrame)
+            if let first = audioFormat[key] {
+                if first.0 != format.0 || first.1 != format.1 { return }
+            } else {
+                audioFormat[key] = format
+            }
+        }
         guard let out = retimed(sample) else { return }
+        // A buffer that starts before the previous one ended (overlapping system audio) is rejected by the
+        // writer with -16341 and breaks the file: drop it.
+        let outPTS = CMSampleBufferGetPresentationTimeStamp(out)
+        if let end = audioEnd[key], CMTimeCompare(outPTS, CMTimeSubtract(end, CMTime(value: 1, timescale: 1000))) < 0 { return }
+        let duration = CMSampleBufferGetDuration(out)
+        audioEnd[key] = duration.isValid ? CMTimeAdd(outPTS, duration) : outPTS
         // A broken audio buffer should not take the video down with it: drop that track's sample and go on.
         if !input.append(out) {
             if writer.status == .failed {
                 failed = true
-                failure = "audio append failed"
+                let fmt = audioFormat[key].map { "\(Int($0.0)) Hz, \($0.1) ch" } ?? "unknown format"
+                failure = "audio append failed at \(String(format: "%.2f", CMTimeSubtract(outPTS, startTime).seconds)) s (\(input === micInput ? "mic" : "system audio"), \(fmt), \(CMSampleBufferGetNumSamples(out)) frames)"
             }
         }
     }
