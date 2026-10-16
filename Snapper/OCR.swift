@@ -44,7 +44,7 @@ enum OCR {
             queue.async {
                 let prepared = prepare(image)
                 var result = read(prepared, languages: languages(), detect: false)
-                if result.lines.isEmpty { result = read(prepared, languages: [], detect: true) }
+                if result.lines.isEmpty, result.error == nil { result = read(prepared, languages: [], detect: true) }
                 lock.lock(); lines = result.lines; failure = result.error; lock.unlock()
                 group.leave()
             }
@@ -68,19 +68,35 @@ enum OCR {
     private static func read(_ image: CGImage, languages: [String], detect: Bool) -> (lines: [String], error: String?) {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        // Screenshots are full of code, URLs and names, which "correction" tends to mangle, and it is slower.
+        request.usesLanguageCorrection = false
         if detect {
             request.automaticallyDetectsLanguage = true
         } else if !languages.isEmpty {
             request.recognitionLanguages = languages
         }
-        do {
-            try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
-        } catch {
-            NSLog("Snapper OCR: \(error)")
-            return ([], error.localizedDescription)
+
+        // Some captures make Vision's reader fail (CRImageReaderError), so try other ways of handing it the pixels.
+        var handlers: [() -> VNImageRequestHandler?] = [
+            { VNImageRequestHandler(cgImage: image, options: [:]) },
+            { VNImageRequestHandler(ciImage: CIImage(cgImage: image), options: [:]) },
+            {
+                guard let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return nil }
+                return VNImageRequestHandler(data: png, options: [:])
+            }
+        ]
+        var lastError: String?
+        while !handlers.isEmpty {
+            guard let handler = handlers.removeFirst()() else { continue }
+            do {
+                try handler.perform([request])
+                return (readingOrder(request.results ?? []), nil)
+            } catch {
+                NSLog("Snapper OCR: \(error)")
+                lastError = error.localizedDescription
+            }
         }
-        return (readingOrder(request.results ?? []), nil)
+        return ([], lastError)
     }
 
     /// English first, plus the user's own languages when Vision supports them.
@@ -118,18 +134,21 @@ enum OCR {
         return rows.map { $0.sorted { $0.box.minX < $1.box.minX }.map(\.text).joined(separator: " ") }
     }
 
-    /// Huge captures are scaled down (Vision does not need more than about 3000 px), tiny ones up to 2x.
+    /// Always redraws the capture into a plain 8-bit sRGB bitmap on white. Captures arrive in all sorts of pixel
+    /// formats and colour spaces, and Vision's reader rejects some of them. Huge ones are scaled down (Vision does
+    /// not need more than about 2600 px), tiny ones up to 2x.
     private static func prepare(_ image: CGImage) -> CGImage {
         let longest = max(image.width, image.height), smallest = min(image.width, image.height)
         var k = 1.0
-        if longest > 3000 { k = 3000.0 / Double(longest) }
+        if longest > 2600 { k = 2600.0 / Double(longest) }
         else if smallest < 160 { k = min(2.0, 320.0 / Double(max(smallest, 1))) }
-        guard abs(k - 1) > 0.05 else { return image }
-        let w = max(1, Int(Double(image.width) * k)), h = max(1, Int(Double(image.height) * k))
+        let w = max(2, Int(Double(image.width) * k)), h = max(2, Int(Double(image.height) * k))
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return image }
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
         ctx.interpolationQuality = .high
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         return ctx.makeImage() ?? image
