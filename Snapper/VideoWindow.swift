@@ -17,6 +17,7 @@ final class VideoEditModel: ObservableObject {
     @Published var duration: Double = 0
     @Published var trimStart: Double = 0
     @Published var trimEnd: Double = 0
+    @Published var showAllBackgrounds = false
     var onChange: (() -> Void)?
     var onExportMP4: (() -> Void)?
     var onExportGIF: (() -> Void)?
@@ -198,7 +199,7 @@ final class VideoWindowController: NSObject, NSWindowDelegate {
 
         let sidebar = NSHostingView(rootView: VideoEditSidebar(model: model))
         sidebar.translatesAutoresizingMaskIntoConstraints = false
-        sidebar.widthAnchor.constraint(equalToConstant: 290).isActive = true
+        sidebar.widthAnchor.constraint(equalToConstant: 296).isActive = true
         sidebar.isHidden = isGIF
 
         let divider = NSBox()
@@ -524,149 +525,126 @@ private final class ExportBox: @unchecked Sendable {
 private struct VideoEditSidebar: View {
     @ObservedObject var model: VideoEditModel
 
-    private let swatchColumns = Array(repeating: GridItem(.fixed(38), spacing: 5), count: 6)
+    private let navy = Color(red: 0.106, green: 0.106, blue: 0.302)
+    private let swatch: CGFloat = 24
+    private let featured = 5          // built-in backgrounds shown before "more"
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                trimCard
-
+            VStack(alignment: .leading, spacing: 22) {
+                trimSection
                 Divider()
-
-                section("Background") {
-                    LazyVGrid(columns: swatchColumns, alignment: .leading, spacing: 5) {
-                        swatch(.none)
-                        ForEach(0..<BackgroundCatalog.builtIn.count, id: \.self) { i in swatch(.builtIn(i)) }
-                        swatch(.wallpaper)
+                backgroundSection
+                frameSection
+                zoomSection
+                if model.cursorHidden { cursorSection }
+                if model.settings != VideoEditSettings() {
+                    Button { model.settings = VideoEditSettings() } label: {
+                        Label("Reset edits", systemImage: "arrow.counterclockwise")
+                            .font(.system(size: 11))
                     }
-                    labeled("Padding") {
-                        Slider(value: bind(\.background.padding, 0...0.3), in: 0...0.3)
-                    }
-                    labeled("Corners") {
-                        Slider(value: bind(\.background.cornerRadius, 0...60), in: 0...60)
-                    }
-                    labeled("Shadow") {
-                        Slider(value: bind(\.background.shadow, 0...1), in: 0...1)
-                    }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.secondary)
                 }
-
-                section("Format") {
-                    TilePicker(selection: Binding(get: { model.settings.format }, set: { model.settings.format = $0 }),
-                               choices: VideoEditSettings.Format.allCases.map { f in
-                                   Choice(f, f == .original ? "Original" : (f.rawValue.split(separator: " ").last.map(String.init) ?? f.rawValue)) {
-                                       AspectArt(ratio: f.aspect.ratio)
-                                   }
-                               },
-                               tile: CGSize(width: 42, height: 34))
-                    Text("For TikTok, Reels and Shorts use Vertical; YouTube uses Landscape.")
-                        .font(.caption).foregroundColor(.secondary)
-                }
-
-                section("Smart zoom") {
-                    Toggle("Zoom in on clicks, follow the cursor", isOn: Binding(get: { model.settings.smartZoom },
-                                                                                 set: { model.settings.smartZoom = $0 }))
-                        .disabled(!model.hasCursorLog)
-                    labeled("Zoom") {
-                        Slider(value: Binding(get: { model.settings.zoomLevel }, set: { model.settings.zoomLevel = $0 }),
-                               in: 1.25...3.5)
-                    }
-                    .disabled(!model.settings.smartZoom)
-                    labeled("Motion blur") {
-                        Slider(value: Binding(get: { model.settings.motionBlur }, set: { model.settings.motionBlur = $0 }),
-                               in: 0...1)
-                    }
-                    .disabled(!model.settings.smartZoom)
-                    if !model.hasCursorLog {
-                        Text("Needs a recording made with this version of Snapper (it logs clicks while recording).")
-                            .font(.caption).foregroundColor(.secondary)
-                    }
-                }
-
-                section("Cursor") {
-                    if model.cursorHidden {
-                        Toggle("Smooth movement", isOn: Binding(get: { model.settings.smoothCursor },
-                                                                set: { model.settings.smoothCursor = $0 }))
-                        labeled("Size") {
-                            Slider(value: Binding(get: { model.settings.cursorScale }, set: { model.settings.cursorScale = $0 }),
-                                   in: 0.75...3)
-                        }
-                        Toggle("Click effects", isOn: Binding(get: { model.settings.clickEffects },
-                                                              set: { model.settings.clickEffects = $0 }))
-                    } else {
-                        Text("Turn on \u{201C}Editable cursor\u{201D} in Settings > Recording to smooth the cursor, resize it and add click effects after recording.")
-                            .font(.caption).foregroundColor(.secondary)
-                    }
-                }
-
-                Button("Reset Edits") { model.settings = VideoEditSettings() }
-                    .controlSize(.small)
-                    .disabled(model.settings == VideoEditSettings())
             }
-            .padding(14)
+            .padding(16)
         }
         .disabled(model.busy)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private var trimCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Trim").font(.system(size: 13, weight: .semibold)).foregroundColor(.secondary)
-                Spacer()
+    // MARK: Trim and export
+
+    private var trimSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header("Trim") {
                 if model.isTrimmed {
-                    Button("Reset") { model.onResetTrim?() }
-                        .buttonStyle(.link)
-                        .font(.caption)
+                    iconButton("arrow.counterclockwise", help: "Reset trim") { model.onResetTrim?() }
                 }
             }
-            timeRow("Start", model.trimStart)
-            timeRow("End", model.trimEnd)
-            timeRow("Length", max(0, model.trimEnd - model.trimStart))
+            HStack(spacing: 0) {
+                timeCell("START", model.trimStart)
+                Divider().frame(height: 26)
+                timeCell("END", model.trimEnd)
+                Divider().frame(height: 26)
+                timeCell("LENGTH", max(0, model.trimEnd - model.trimStart))
+            }
+            .padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.07)))
+
             HStack(spacing: 8) {
-                exportTile("MP4", symbol: "film") { model.onExportMP4?() }
-                exportTile("GIF", symbol: "sparkles") { model.onExportGIF?() }
+                Button { model.onExportMP4?() } label: {
+                    Label("MP4", systemImage: "film")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity).frame(height: 34)
+                        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(navy))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Export as MP4")
+                Button { model.onExportGIF?() } label: {
+                    Label("GIF", systemImage: "sparkles")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity).frame(height: 34)
+                        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Export as GIF")
             }
-            .padding(.top, 6)
         }
     }
 
-    private func exportTile(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 7) {
-                Image(systemName: symbol).font(.system(size: 14, weight: .semibold))
-                Text(title).font(.system(size: 14, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.106, green: 0.106, blue: 0.302)))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.12)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("Export as \(title)")
-    }
-
-    private func timeRow(_ title: String, _ seconds: Double) -> some View {
-        let m = Int(seconds) / 60
+    private func timeCell(_ title: String, _ seconds: Double) -> some View {
+        let m = Int(max(0, seconds)) / 60
         let text = String(format: "%02d:%04.1f", m, max(0, seconds) - Double(m * 60))
-        return HStack {
-            Text(title).font(.system(size: 14))
-            Spacer()
-            Text(text).font(.system(size: 14, weight: .semibold)).monospacedDigit()
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.system(size: 9, weight: .semibold)).tracking(0.6).foregroundColor(.secondary)
+            Text(text).font(.system(size: 13, weight: .semibold)).monospacedDigit()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.07)))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12)
     }
 
-    private func bind(_ kp: WritableKeyPath<VideoEditSettings, CGFloat>, _ range: ClosedRange<Double>) -> Binding<Double> {
-        Binding(get: { Double(model.settings[keyPath: kp]) },
-                set: { var s = model.settings; s[keyPath: kp] = CGFloat($0); model.settings = s })
+    // MARK: Background
+
+    private var backgroundSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header("Background") { EmptyView() }
+            let catalog = BackgroundCatalog.builtIn.count
+            let shown = model.showAllBackgrounds ? catalog : min(featured, catalog)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(swatch), spacing: 7), count: 8), alignment: .leading, spacing: 7) {
+                swatchButton(.none, help: "No background")
+                swatchButton(.wallpaper, help: "Desktop wallpaper")
+                ForEach(0..<shown, id: \.self) { i in swatchButton(.builtIn(i), help: BackgroundCatalog.builtIn[i].name) }
+                if catalog > featured {
+                    Button { model.showAllBackgrounds.toggle() } label: {
+                        Image(systemName: model.showAllBackgrounds ? "chevron.up" : "ellipsis")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .frame(width: swatch, height: swatch)
+                            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Color.primary.opacity(0.15)))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(model.showAllBackgrounds ? "Fewer" : "More backgrounds")
+                }
+            }
+            if !model.settings.background.isNone {
+                VStack(spacing: 6) {
+                    iconSlider("rectangle.inset.filled", help: "Padding", value: bind(\.background.padding), range: 0...0.3)
+                    iconSlider("rectangle.roundedtop", help: "Corners", value: bind(\.background.cornerRadius), range: 0...60)
+                    iconSlider("shadow", help: "Shadow", value: bind(\.background.shadow), range: 0...1)
+                }
+            }
+        }
     }
 
-    private func swatch(_ fill: BackgroundSettings.Fill) -> some View {
+    private func swatchButton(_ fill: BackgroundSettings.Fill, help: String) -> some View {
         let selected = model.settings.background.fill == fill
         return Button(action: {
             var s = model.settings
@@ -677,25 +655,131 @@ private struct VideoEditSidebar: View {
             s.background.fill = fill
             model.settings = s
         }) {
-            Image(nsImage: BackgroundMaker.thumbnail(fill, size: CGSize(width: 38, height: 26)))
-                .overlay(RoundedRectangle(cornerRadius: 7)
-                    .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2.5).padding(-2))
+            Group {
+                if fill == .none {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Color.primary.opacity(0.18))
+                        Image(systemName: "circle.slash").font(.system(size: 11)).foregroundColor(.secondary)
+                    }
+                } else {
+                    Image(nsImage: BackgroundMaker.thumbnail(fill, size: CGSize(width: swatch * 2, height: swatch * 2)))
+                        .resizable()
+                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                }
+            }
+            .frame(width: swatch, height: swatch)
+            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2).padding(-3))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(help)
     }
 
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.headline)
-            content()
+    // MARK: Frame
+
+    private var frameSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header("Frame") {
+                Text(label(model.settings.format)).font(.system(size: 11)).foregroundColor(.secondary)
+            }
+            HStack(spacing: 6) {
+                ForEach(VideoEditSettings.Format.allCases, id: \.self) { f in
+                    let on = model.settings.format == f
+                    Button { model.settings.format = f } label: {
+                        AspectArt(ratio: f.aspect.ratio)
+                            .frame(width: 26, height: 20)
+                            .foregroundColor(on ? .accentColor : .secondary)
+                            .frame(maxWidth: .infinity).frame(height: 36)
+                            .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(on ? Color.accentColor.opacity(0.12) : Color.clear))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(f.rawValue)
+                }
+            }
         }
     }
 
-    private func labeled<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func label(_ f: VideoEditSettings.Format) -> String {
+        f == .original ? "Original" : (f.rawValue.split(separator: " ").last.map(String.init) ?? f.rawValue)
+    }
+
+    // MARK: Smart zoom and cursor
+
+    private var zoomSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header("Smart zoom") {
+                Toggle("", isOn: Binding(get: { model.settings.smartZoom }, set: { model.settings.smartZoom = $0 }))
+                    .toggleStyle(.switch).controlSize(.mini).labelsHidden()
+                    .disabled(!model.hasCursorLog)
+            }
+            .help(model.hasCursorLog ? "Zoom in on clicks and follow the cursor"
+                                     : "Needs a recording made with Snapper, which logs clicks while recording")
+            if model.settings.smartZoom {
+                VStack(spacing: 6) {
+                    iconSlider("plus.magnifyingglass", help: "Zoom",
+                               value: Binding(get: { model.settings.zoomLevel }, set: { model.settings.zoomLevel = $0 }), range: 1.25...3.5)
+                    iconSlider("wind", help: "Motion blur",
+                               value: Binding(get: { model.settings.motionBlur }, set: { model.settings.motionBlur = $0 }), range: 0...1)
+                }
+            }
+        }
+    }
+
+    private var cursorSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header("Cursor") { EmptyView() }
+            iconSlider("cursorarrow", help: "Cursor size",
+                       value: Binding(get: { model.settings.cursorScale }, set: { model.settings.cursorScale = $0 }), range: 0.75...3)
+            iconToggle("scribble.variable", "Smooth movement",
+                       isOn: Binding(get: { model.settings.smoothCursor }, set: { model.settings.smoothCursor = $0 }))
+            iconToggle("cursorarrow.click.2", "Click effects",
+                       isOn: Binding(get: { model.settings.clickEffects }, set: { model.settings.clickEffects = $0 }))
+        }
+    }
+
+    // MARK: Building blocks
+
+    private func header<Accessory: View>(_ title: String, @ViewBuilder accessory: () -> Accessory) -> some View {
         HStack {
-            Text(title).font(.callout).foregroundColor(.secondary).frame(width: 78, alignment: .leading)
-            content()
+            Text(title).font(.system(size: 12, weight: .semibold)).foregroundColor(.secondary)
+            Spacer()
+            accessory()
         }
+        .frame(height: 18)
+    }
+
+    private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary)
+                .frame(width: 18, height: 18).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    private func iconSlider(_ symbol: String, help: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 12)).foregroundColor(.secondary).frame(width: 18)
+            Slider(value: value, in: range).controlSize(.small)
+        }
+        .help(help)
+    }
+
+    private func iconToggle(_ symbol: String, _ title: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 12)).foregroundColor(.secondary).frame(width: 18)
+            Text(title).font(.system(size: 12))
+            Spacer()
+            Toggle("", isOn: isOn).toggleStyle(.switch).controlSize(.mini).labelsHidden()
+        }
+    }
+
+    private func bind(_ kp: WritableKeyPath<VideoEditSettings, CGFloat>) -> Binding<Double> {
+        Binding(get: { Double(model.settings[keyPath: kp]) },
+                set: { var s = model.settings; s[keyPath: kp] = CGFloat($0); model.settings = s })
     }
 }
 
