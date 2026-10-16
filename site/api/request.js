@@ -31,11 +31,11 @@ module.exports = async (req, res) => {
           "",
           "The link works for 7 days and always serves the latest version.",
           "Requires an Apple Silicon Mac on macOS 14 or later.",
-          "First launch: open the .dmg, drag Snapper to Applications, then right-click the app and choose Open.",
+          "First launch: open the .dmg, drag Snapper to Applications, open it, then approve it once under System Settings > Privacy & Security > Open Anyway. Step by step: " + origin + "/install.html",
           "",
           "Snapper, built by Bykorp",
         ].join("\n"),
-        html: mailHtml(link),
+        html: mailHtml(link, origin + "/install.html"),
       });
     } else if (process.env.OWNER_EMAIL) {
       // Not on the list: tell the owner so they can invite the person.
@@ -57,8 +57,9 @@ function safeParse(s) {
   try { return JSON.parse(s); } catch { return {}; }
 }
 
-function mailHtml(link) {
+function mailHtml(link, installUrl) {
   const safe = escapeHtml(link);
+  const safeInstall = escapeHtml(installUrl);
   return `<!doctype html><html><body style="margin:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b4d">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px">
@@ -67,7 +68,7 @@ function mailHtml(link) {
 <p style="margin:0 0 24px;font-size:15px;line-height:1.5;color:#555a6e">You are invited. The button below downloads the latest version for macOS.</p>
 <p style="margin:0 0 24px"><a href="${safe}" style="display:inline-block;background:#1b1b4d;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px">Download Snapper</a></p>
 <p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#555a6e">The link works for 7 days. Requires an Apple Silicon Mac on macOS 14 or later.</p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#555a6e">First launch: drag Snapper to Applications, then right-click it and choose Open.</p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#555a6e">First launch: drag Snapper to Applications, open it, then approve it once under System Settings, Privacy &amp; Security, Open Anyway. <a href="${safeInstall}" style="color:#1b1b4d">Step by step</a>.</p>
 </td></tr></table>
 <p style="margin:16px 0 0;font-size:12px;color:#8a8fa3">Snapper, built by Bykorp</p>
 </td></tr></table></body></html>`;

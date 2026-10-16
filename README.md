@@ -15,8 +15,7 @@ chmod +x build.sh
 ./build.sh --no-run        # build only (output: build/Snapper.app)
 ```
 
-This code was written without access to a Swift compiler (it has been syntax-checked, not type-checked),
-so the first build may show a few compile errors. Send them over and they are quick to fix.
+Every push to `main` is compiled on a GitHub Mac runner, so a broken build shows up there first.
 
 Without typing commands: double-click `Build Snapper.command` (build and launch) or `Make DMG.command`
 (build the installer). If macOS blocks them, right-click the file, choose Open, then Open.
@@ -74,7 +73,7 @@ Defaults:
 ## Features
 
 ### Capture
-- **Modes:** area, window, fullscreen, previous area, scrolling (vertical and horizontal), self-timer
+- **Modes:** area, window, fullscreen, previous area, scrolling (vertical; horizontal is available from the `snapper://` URL scheme), self-timer
   (area or fullscreen, 3/5/10 s), pin area, OCR.
 - **All-in-one:** one shortcut. Drag a selection, then move or resize it with handles, nudge it with the
   arrow keys, type an exact width and height, lock the aspect ratio. The last selection is remembered.
@@ -88,19 +87,19 @@ Defaults:
 ### Quick Access overlay
 - Compact card in a screen corner of the display you captured (bottom/top, left/right), three sizes.
 - Several captures stack; the newest sits in the corner.
-- Hover for buttons: copy, save, annotate, pin, copy text, upload. Drag the card into any app.
+- Hover for buttons: copy, save, annotate, pin, copy text. Drag the card into any app.
 - Pinch or scroll over the card to zoom into the picture; two-finger scroll pans while zoomed; double-tap resets.
 - Save goes straight to your save folder; ⌥-click or `⇧⌘S` for Save As.
-- Swipe with two fingers towards the screen edge to dismiss, away from it to save.
+- Swipe with two fingers towards the screen edge to dismiss.
 - Auto-close timer (paused while hovering), close after copy / save / drag (each optional).
 - Restore recently closed overlays, temporarily hide all overlays, close all.
-- Recordings and GIFs get a card too (copy file, save, edit, upload).
+- Recordings and GIFs get a card too (copy file, save, edit).
 
 ### Annotate
 - **Tools:** select, crop, arrow (filled, open, tapered, double, curved), line, rectangle (outline or
   filled), ellipse, pencil (auto-smoothed), highlighter (fits the height of the text you drag over),
-  text (7 styles), callout, counter (1, 2, 3…), spotlight (rectangle or ellipse), pixelate (randomised),
-  blur (smooth or secure).
+  text (7 styles), callout, counter (1, 2, 3…), spotlight (rectangle or ellipse), redact (secure, which is a randomised pixel mosaic, or smooth blur; older
+  pixelate annotations still open and render).
 - **Editing:** resize handles on shapes, arrow end and bend handles, rotate one annotation, arrow keys nudge,
   undo/redo (bottom bar, `⌘Z` / `⇧⌘Z`), per-tool remembered styles.
 - **Colour:** colour well, eyedropper (picks from anywhere on screen), favourite colours palette.
@@ -122,24 +121,26 @@ Defaults:
 - Show or hide the cursor; "editable cursor" records without it so the editor can draw it.
 - Clicks: colour, size, outline or filled, animation. Keystrokes: position, size, dark or light, all keys
   or only shortcuts. Camera: position, size, circle or rounded rectangle, double-click for fullscreen camera.
-- Optional Do Not Disturb (see below) and hidden desktop icons while recording.
+- Hidden desktop icons while recording. Do Not Disturb is built but switched off in the alpha (see below).
 
 ### Video editor
 - Background (gradients, wallpaper), padding, corners, shadow.
 - Formats: original, landscape 16:9, square 1:1, vertical 9:16, portrait 4:5.
 - Smart zoom: zooms in on clicks and follows the cursor, with adjustable zoom and motion blur.
 - Cursor (editable-cursor recordings): smooth movement, size, click effects.
-- Live preview, trim, export MP4 (hardware encoder via AVFoundation) or GIF, copy, reveal, upload.
+- Live preview, trim, export MP4 (hardware encoder via AVFoundation) or GIF, copy, reveal.
 
 ### Pins, OCR, history
 - **Pins:** rounded, float above all windows. Pinch to zoom into the picture (around the pointer), scroll or
   drag to pan while zoomed, double-click to reset. Scroll wheel or two-finger scroll zooms, `⌥`-scroll for opacity, `⌘`-scroll, `⌘+` / `⌘−`
   or an edge to resize, `⌘0` 100 %, arrow keys to position, hover for a close button, lock mode, right-click menu.
-- **OCR:** on-device Vision with automatic language detection (30+ languages incl. CJK), QR and barcodes.
+- **OCR:** on-device Vision, instant for Latin-script text (English and most European languages), plus QR codes and barcodes. Other scripts depend on the more accurate macOS model, which does not run on every Mac; when it does not, Snapper says so.
 - **History:** window with thumbnails, filters (screenshots, windows, scrolling, recordings), restore,
   annotate, copy, reveal, delete; keeps 1 day to 1 month.
 
-### Cloud (self-hosted)
+### Cloud (self-hosted, off in the alpha)
+The upload buttons, the Cloud settings tab and `⌘U` are switched off in the alpha build (`Features.cloudUpload` in `Snapper/Features.swift`). The code and the server below are unchanged. Hosted link sharing is planned.
+
 `server/server.js` is a dependency-free Node 18+ server:
 
 ```bash
@@ -171,7 +172,9 @@ Not included: hosted accounts, teams/SSO/SCIM, transcription, custom-domain bran
 - **Input Monitoring:** keystroke display.
 - **Microphone / Camera:** only when those options are on.
 
-## Do Not Disturb while recording
+## Do Not Disturb while recording (off in the alpha)
+
+Switched off with `Features.doNotDisturb`. When it is on:
 
 macOS has no public API for Focus, so Snapper runs two Shortcuts you create once in the Shortcuts app:
 - `Snapper Focus On`: action "Set Focus" → Do Not Disturb → On

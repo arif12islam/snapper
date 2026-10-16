@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install Snapper</title>
+<meta name="description" content="How to install the Snapper alpha on a Mac, including the one-time security approval.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family: "Inter"; src: url("/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+  :root { --ink: #15153d; --body: #4c4e6a; --soft: #8a8ca6; --line: #e9e9f2; --tint: #f6f7fc; --navy: #1b1b4d; --sky: #8cb8ff; --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); }
+  a { color: var(--navy); }
+  :focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 96px; }
+  header { display: flex; align-items: center; gap: 10px; height: 72px; max-width: 760px; margin: 0 auto; padding: 0 24px; }
+  header a { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; color: var(--ink); }
+  header img { width: 34px; height: 34px; border-radius: 9px; }
+  h1 { margin: 24px 0 12px; font-size: clamp(36px, 6vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.035em; }
+  h2 { margin: 0 0 6px; font-size: 22px; line-height: 1.25; font-weight: 720; letter-spacing: -0.02em; }
+  p { margin: 0; color: var(--body); }
+  .lead { font-size: 19px; margin-bottom: 36px; }
+  ol { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  li { counter-increment: step; display: grid; grid-template-columns: 40px 1fr; gap: 0 16px; padding: 28px 0; border-top: 1px solid var(--line); }
+  li::before { content: counter(step); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 16px; }
+  li .art { grid-column: 2; margin-top: 16px; }
+  svg { display: block; width: 100%; height: auto; max-width: 520px; border-radius: 14px; background: var(--tint); }
+  .note { margin-top: 36px; padding: 18px 20px; border-radius: 16px; background: var(--tint); }
+  .note h2 { font-size: 18px; }
+  .note + .note { margin-top: 14px; }
+  kbd, .k { font: 600 0.9em var(--sans); padding: 1px 7px; border-radius: 6px; background: var(--tint); border: 1px solid var(--line); white-space: nowrap; }
+</style>
+</head>
+<body>
+<header><a href="/"><img src="/icon-192.png" alt="" width="34" height="34">Snapper</a></header>
+<main class="wrap">
+  <h1>Install Snapper</h1>
+  <p class="lead">Five steps, about two minutes. Snapper is in alpha and is not yet approved by Apple, so macOS asks you to confirm it once.</p>
+
+  <ol>
+    <li>
+      <div>
+        <h2>Drag Snapper to Applications</h2>
+        <p>Open the downloaded <span class="k">Snapper.dmg</span>, then drag the Snapper icon onto the Applications folder.</p>
+      </div>
+      <div class="art">
+        <svg viewBox="0 0 520 170" role="img" aria-label="The Snapper icon being dragged onto the Applications folder">
+          <rect x="60" y="40" width="88" height="88" rx="20" fill="#1b1b4d"/>
+          <circle cx="104" cy="84" r="22" fill="none" stroke="#fff" stroke-width="10"/>
+          <path d="M170 84h150" stroke="#8a8ca6" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round"/>
+          <path d="M310 72l16 12-16 12" fill="none" stroke="#8a8ca6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M360 62h34l8 10h58a8 8 0 0 1 8 8v44a8 8 0 0 1-8 8H360a8 8 0 0 1-8-8V70a8 8 0 0 1 8-8z" fill="#8cb8ff"/>
+          <text x="420" y="150" text-anchor="middle" font-size="14" fill="#4c4e6a" font-family="Inter, sans-serif">Applications</text>
+        </svg>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h2>Open it, then close the warning</h2>
+        <p>Open Snapper from Applications. macOS says it cannot verify the app. Click <span class="k">Done</span>. Do not choose Move to Trash.</p>
+      </div>
+      <div class="art">
+        <svg viewBox="0 0 520 190" role="img" aria-label="A macOS warning that Snapper cannot be verified, with the Done button highlighted">
+          <rect x="130" y="20" width="260" height="150" rx="16" fill="#fff" stroke="#e9e9f2"/>
+          <rect x="150" y="38" width="36" height="36" rx="9" fill="#1b1b4d"/>
+          <text x="198" y="54" font-size="12" font-weight="700" fill="#15153d" font-family="Inter, sans-serif">Snapper was not opened</text>
+          <text x="198" y="70" font-size="10.5" fill="#4c4e6a" font-family="Inter, sans-serif">Apple could not verify it is free of malware.</text>
+          <rect x="150" y="100" width="100" height="26" rx="8" fill="#f6f7fc" stroke="#e9e9f2"/>
+          <text x="200" y="117" text-anchor="middle" font-size="11" fill="#4c4e6a" font-family="Inter, sans-serif">Move to Trash</text>
+          <rect x="266" y="100" width="104" height="26" rx="8" fill="#1b1b4d"/>
+          <text x="318" y="117" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Inter, sans-serif">Done</text>
+          <rect x="260" y="94" width="116" height="38" rx="12" fill="none" stroke="#ff3b30" stroke-width="2"/>
+        </svg>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h2>Approve it in System Settings</h2>
+        <p>Open <span class="k">System Settings</span>, then <span class="k">Privacy &amp; Security</span>. Scroll down to Security. Next to &ldquo;Snapper was blocked&rdquo;, click <span class="k">Open Anyway</span> and confirm with your password or Touch ID.</p>
+        <p style="margin-top:8px">On macOS 14 you can instead right-click Snapper in Applications and choose Open.</p>
+      </div>
+      <div class="art">
+        <svg viewBox="0 0 520 150" role="img" aria-label="Privacy and Security settings with the Open Anyway button highlighted">
+          <rect x="40" y="20" width="440" height="110" rx="14" fill="#fff" stroke="#e9e9f2"/>
+          <text x="62" y="48" font-size="12" font-weight="700" fill="#15153d" font-family="Inter, sans-serif">Security</text>
+          <text x="62" y="76" font-size="11.5" fill="#4c4e6a" font-family="Inter, sans-serif">&#8220;Snapper&#8221; was blocked to protect your Mac.</text>
+          <rect x="350" y="60" width="106" height="26" rx="8" fill="#1b1b4d"/>
+          <text x="403" y="77" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Inter, sans-serif">Open Anyway</text>
+          <rect x="344" y="54" width="118" height="38" rx="12" fill="none" stroke="#ff3b30" stroke-width="2"/>
+        </svg>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h2>Click Open</h2>
+        <p>macOS asks once more. Click <span class="k">Open</span>. Snapper appears in your menu bar and a short welcome guide starts.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h2>Allow screen recording</h2>
+        <p>The welcome guide asks for the Screen Recording permission. Without it every capture is blank. Turn Snapper on under Screen &amp; System Audio Recording, then quit and reopen Snapper once.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="note">
+    <h2>Something went wrong?</h2>
+    <p>Captures are blank: the Screen Recording permission is off or needs a restart of Snapper. Anything else: click the Snapper icon in the menu bar, choose <span class="k">Send Feedback</span>, and tell us what happened. The diagnostics it adds help a lot.</p>
+  </div>
+  <div class="note">
+    <h2>Requirements</h2>
+    <p>A Mac with Apple silicon (M1 or later) running macOS 14 or newer. Snapper checks for updates itself and installs them with one click.</p>
+  </div>
+</main>
+</body>
+</html>
