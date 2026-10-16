@@ -81,16 +81,61 @@ final class RecordingSession {
         self.engine = nil
         let gif = makeGIF
         let screen = self.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        let fileURL = url
         Task {
             let (url, error) = await engine.stop()
             Self.clearManifest()
             if let url {
                 await self.finished(url: url, gif: gif, screen: screen)
-            } else if let error {
-                NSApp.activate(ignoringOtherApps: true)
-                NSAlert(error: error).runModal()
+                return
             }
+            guard let error else { return }
+            Self.logFailure(error)
+            // The file is written in fragments, so even when finishing fails most of it is usually playable.
+            if let fileURL, await Self.isPlayable(fileURL) {
+                Toast.show("Recording saved, but it ended early", on: screen, seconds: 3)
+                await self.finished(url: fileURL, gif: gif, screen: screen)
+                return
+            }
+            NSApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "The recording couldn\u{2019}t be finished"
+            alert.informativeText = Self.describe(error) + "\n\nDetails are in ~/Library/Logs/Snapper/recording.log"
+            alert.runModal()
         }
+    }
+
+    /// Domain, code, message and the underlying error, which is where AVFoundation puts the real reason.
+    static func describe(_ error: Error) -> String {
+        let e = error as NSError
+        var text = "\(e.localizedDescription) (\(e.domain) \(e.code))"
+        if let reason = e.localizedFailureReason { text += "\n\(reason)" }
+        if let under = e.userInfo[NSUnderlyingErrorKey] as? NSError {
+            text += "\nUnderlying: \(under.localizedDescription) (\(under.domain) \(under.code))"
+        }
+        return text
+    }
+
+    private static func logFailure(_ error: Error) {
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Snapper", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let log = dir.appendingPathComponent("recording.log")
+        let line = "\(ISO8601DateFormatter().string(from: Date())) \(describe(error).replacingOccurrences(of: "\n", with: " | ")) \((error as NSError).userInfo)\n"
+        NSLog("Snapper recording: \(line)")
+        guard let data = line.data(using: .utf8) else { return }
+        if let h = try? FileHandle(forWritingTo: log) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        } else {
+            try? data.write(to: log)
+        }
+    }
+
+    private static func isPlayable(_ url: URL) async -> Bool {
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 10_000 else { return false }
+        let asset = AVURLAsset(url: url)
+        guard let playable = try? await asset.load(.isPlayable), playable,
+              let duration = try? await asset.load(.duration), duration.seconds > 0.3 else { return false }
+        return true
     }
 
     // MARK: - Start
@@ -275,8 +320,12 @@ final class RecordingSession {
         teardownUI()
         restoreEnvironment()
         Self.clearManifest()
+        Self.logFailure(error)
         NSApp.activate(ignoringOtherApps: true)
-        NSAlert(error: error).runModal()
+        let alert = NSAlert()
+        alert.messageText = "The recording couldn\u{2019}t start"
+        alert.informativeText = Self.describe(error)
+        alert.runModal()
     }
 
     private func teardownUI() {

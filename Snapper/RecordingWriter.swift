@@ -20,6 +20,7 @@ final class RecordingWriter: @unchecked Sendable {
     private var timeOffset = CMTime.zero
     private var lastVideoPTS = CMTime.invalid     // in output timeline
     private(set) var failed = false
+    private var failure: String?
 
     let url: URL
 
@@ -115,11 +116,15 @@ final class RecordingWriter: @unchecked Sendable {
             }
             waitingForVideoAfterResume = false
         }
-        guard videoInput.isReadyForMoreMediaData, let out = retimed(sample) else { return }
+        guard writer.status == .writing, videoInput.isReadyForMoreMediaData, let out = retimed(sample) else { return }
+        // A frame at or before the last one makes the writer fail for good, so drop it instead.
+        let outPTS = CMSampleBufferGetPresentationTimeStamp(out)
+        if lastVideoPTS.isValid, outPTS <= lastVideoPTS { return }
         if videoInput.append(out) {
-            lastVideoPTS = CMSampleBufferGetPresentationTimeStamp(out)
+            lastVideoPTS = outPTS
         } else {
             failed = true
+            failure = "video append failed at \(String(format: "%.2f", CMTimeSubtract(outPTS, startTime).seconds)) s"
         }
     }
 
@@ -127,13 +132,19 @@ final class RecordingWriter: @unchecked Sendable {
     func appendMic(_ sample: CMSampleBuffer) { appendAudio(sample, to: micInput) }
 
     private func appendAudio(_ sample: CMSampleBuffer, to input: AVAssetWriterInput?) {
-        guard !failed, sessionStarted, !paused, !waitingForVideoAfterResume,
+        guard !failed, sessionStarted, !paused, !waitingForVideoAfterResume, writer.status == .writing,
               let input, input.isReadyForMoreMediaData,
               CMSampleBufferIsValid(sample), CMSampleBufferGetNumSamples(sample) > 0 else { return }
         let pts = CMSampleBufferGetPresentationTimeStamp(sample)
         if pts < startTime { return }
         guard let out = retimed(sample) else { return }
-        if !input.append(out) { failed = true }
+        // A broken audio buffer should not take the video down with it: drop that track's sample and go on.
+        if !input.append(out) {
+            if writer.status == .failed {
+                failed = true
+                failure = "audio append failed"
+            }
+        }
     }
 
     private func retimed(_ sample: CMSampleBuffer) -> CMSampleBuffer? {
@@ -173,7 +184,10 @@ final class RecordingWriter: @unchecked Sendable {
                 if self.writer.status == .completed {
                     completion(self.url, nil)
                 } else {
-                    completion(nil, self.writer.error)
+                    var info: [String: Any] = [NSLocalizedDescriptionKey: "The recording could not be finished."]
+                    if let e = self.writer.error { info[NSUnderlyingErrorKey] = e }
+                    if let f = self.failure { info[NSLocalizedFailureReasonErrorKey] = f }
+                    completion(nil, NSError(domain: "Snapper.Recording", code: 12, userInfo: info))
                 }
             }
         }
