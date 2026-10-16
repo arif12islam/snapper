@@ -69,16 +69,13 @@ final class VideoWindowController: NSObject, NSWindowDelegate, NSToolbarDelegate
         }
         // One editor per file.
         if let existing = controllers.values.first(where: { $0.url == url }) {
-            AppPresence.track(existing.window)
-            existing.window.makeKeyAndOrderFront(nil)
+            AppPresence.present(existing.window)
             return
         }
         let c = VideoWindowController(url: url)
         controllers[ObjectIdentifier(c)] = c
         c.window.center()
-        AppPresence.track(c.window)
-        c.window.makeKeyAndOrderFront(nil)
-        c.window.makeFirstResponder(c.timeline)
+        AppPresence.present(c.window, focus: c.timeline)
     }
 
     private init(url: URL) {

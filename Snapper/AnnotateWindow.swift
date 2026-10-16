@@ -162,9 +162,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private func show() {
         Self.controllers[ObjectIdentifier(self)] = self
         window.center()
-        AppPresence.track(window)
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(canvas)
+        AppPresence.present(window, focus: canvas)
     }
 
     func windowDidResize(_ notification: Notification) {

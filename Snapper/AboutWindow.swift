@@ -9,8 +9,7 @@ final class AboutWindow: NSObject, NSWindowDelegate {
 
     static func show() {
         if shared == nil { shared = AboutWindow() }
-        if let w = shared?.window { AppPresence.track(w) }
-        shared?.window.makeKeyAndOrderFront(nil)
+        if let w = shared?.window { AppPresence.present(w) }
     }
 
     private override init() {

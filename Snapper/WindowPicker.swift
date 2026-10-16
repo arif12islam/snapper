@@ -77,9 +77,17 @@ final class WindowPickerOverlay {
         // CG window bounds are top-left origin relative to the primary display.
         let mainHeight = NSScreen.screens.first?.frame.height ?? 0
 
+        // Snapper's own app windows (editor, video editor, settings, history) can be captured like any other app's;
+        // its overlays, panels and pins cannot, so the picker never targets itself.
+        let ownAppWindows = Set(NSApp.windows
+            .filter { $0.isVisible && $0.styleMask.contains(.titled) && !($0 is NSPanel) }
+            .map { CGWindowID($0.windowNumber) })
+
         var result: [PickedWindow] = []
         for info in list {
-            if let pid = info[kCGWindowOwnerPID as String] as? Int, pid == ownPID { continue }
+            let number = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
+            if let pid = info[kCGWindowOwnerPID as String] as? Int, pid == ownPID,
+               !ownAppWindows.contains(CGWindowID(number)) { continue }
             if let layer = info[kCGWindowLayer as String] as? Int, layer != 0 { continue }
             if let alpha = info[kCGWindowAlpha as String] as? Double, alpha <= 0 { continue }
             guard let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
@@ -87,7 +95,6 @@ final class WindowPickerOverlay {
             guard b.width > 1, b.height > 1 else { continue }
             let cocoa = CGRect(x: b.minX, y: mainHeight - b.minY - b.height, width: b.width, height: b.height)
             let owner = (info[kCGWindowOwnerName as String] as? String) ?? "Window"
-            let number = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
             result.append(PickedWindow(frame: cocoa, ownerName: owner, windowID: CGWindowID(number)))
         }
         return result

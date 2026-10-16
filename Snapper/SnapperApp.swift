@@ -75,6 +75,29 @@ enum AppPresence {
         update(activate: true)
     }
 
+    /// Shows an app-style window as a normal window of a normal app. Snapper is a menu bar app, and macOS lets a
+    /// menu bar app's windows float into another app's full-screen Space; switching to a regular app first (and
+    /// giving the switch a moment) makes the window open on the desktop like any other app's window.
+    static func present(_ window: NSWindow, focus: NSResponder? = nil) {
+        var behavior = window.collectionBehavior
+        behavior.remove([.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace, .transient, .stationary])
+        behavior.insert([.managed, .participatesInCycle, .fullScreenPrimary])
+        window.collectionBehavior = behavior
+
+        let wasMenuBarOnly = NSApp.activationPolicy() != .regular
+        track(window)
+        let show = {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            if let focus { window.makeFirstResponder(focus) }
+        }
+        if wasMenuBarOnly {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { show() }
+        } else {
+            show()
+        }
+    }
+
     private static func update(activate: Bool) {
         let policy: NSApplication.ActivationPolicy = windows.isEmpty ? .accessory : .regular
         if NSApp.activationPolicy() != policy { NSApp.setActivationPolicy(policy) }
@@ -92,8 +115,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         if let tab { SettingsRouter.shared.tab = tab }
         if shared == nil { shared = SettingsWindowController() }
         guard let c = shared else { return }
-        AppPresence.track(c.window)
-        c.window.makeKeyAndOrderFront(nil)
+        AppPresence.present(c.window)
     }
 
     private override init() {
