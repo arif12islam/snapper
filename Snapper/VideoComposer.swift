@@ -46,6 +46,7 @@ final class VideoComposer: @unchecked Sendable {
     private let cursorImage: CIImage?
     private let cursorHotspot: CGPoint
     private let zoomTrack: [ZoomSegment]
+    private let cameraPath: [SIMD3<Double>]   // zoom, focus x, focus y every `camStep` seconds
 
     struct ZoomSegment {
         var start: Double
@@ -102,6 +103,7 @@ final class VideoComposer: @unchecked Sendable {
         }
 
         zoomTrack = settings.smartZoom ? Self.buildZoomTrack(log) : []
+        cameraPath = settings.smartZoom ? Self.simulateCamera(track: zoomTrack, log: log, level: settings.zoomLevel) : []
     }
 
     var renderSize: CGSize { outputSize }
@@ -158,7 +160,7 @@ final class VideoComposer: @unchecked Sendable {
         guard let clicks = log?.clicks, !clicks.isEmpty else { return [] }
         var segments: [ZoomSegment] = []
         for c in clicks {
-            let start = max(0, c[0] - 0.35), end = c[0] + hold
+            let start = max(0, c[0] - 0.5), end = c[0] + hold
             if var last = segments.last, start <= last.end + zoomOut {
                 last.end = max(last.end, end)
                 segments[segments.count - 1] = last
@@ -174,23 +176,72 @@ final class VideoComposer: @unchecked Sendable {
         return t * t * (3 - 2 * t)
     }
 
+    private static let camStep = 1.0 / 120
+
+    /// Simulates a camera on critically damped springs, so zooming and panning ease in and out like a real
+    /// camera operator instead of following the pointer directly. The camera only pans when the pointer nears
+    /// the edge of the zoomed view (a dead zone), which removes the jitter of tracking every small movement.
+    /// Precomputed once, so every frame reads the same path whatever order frames are rendered in.
+    private static func simulateCamera(track: [ZoomSegment], log: CursorLog?, level: Double) -> [SIMD3<Double>] {
+        guard let first = track.first, let last = track.last else { return [] }
+        let endTime = max(last.end + 3, (log?.samples.last?.first ?? 0) + 0.5)
+        let count = Int(endTime / camStep) + 2
+        var path: [SIMD3<Double>] = []
+        path.reserveCapacity(count)
+
+        let wz = 2 * Double.pi * 0.8      // zoom spring: settles in about a second
+        let wp = 2 * Double.pi * 0.5      // pan spring: softer, so the view glides
+        let half = 0.5 / max(level, 1)
+        let margin = half * 0.55
+        var z = 1.0, vz = 0.0
+        var fx = Double(first.focus.x), fy = Double(first.focus.y), vx = 0.0, vy = 0.0
+        var tx = fx, ty = fy
+        var seg = 0
+        var wasActive = false
+
+        for i in 0..<count {
+            let t = Double(i) * camStep
+            while seg < track.count, t > track[seg].end { seg += 1 }
+            let active = seg < track.count && t >= track[seg].start
+            let targetZoom = active ? level : 1.0
+
+            if active && !wasActive {
+                tx = Double(track[seg].focus.x)
+                ty = Double(track[seg].focus.y)
+                // Fully zoomed out, the focus is invisible: start right on the click.
+                if z < 1.03 { fx = tx; fy = ty; vx = 0; vy = 0 }
+            }
+            wasActive = active
+
+            if active, let p = log?.smoothedPosition(at: t, window: 0.3) {
+                let dx = Double(p.x) - tx, dy = Double(p.y) - ty
+                if abs(dx) > margin { tx += dx - (dx > 0 ? margin : -margin) }
+                if abs(dy) > margin { ty += dy - (dy > 0 ? margin : -margin) }
+            }
+            // Keep the zoomed view inside the frame, so it never hits the edge and stops dead.
+            tx = min(max(tx, half), 1 - half)
+            ty = min(max(ty, half), 1 - half)
+
+            vz += (wz * wz * (targetZoom - z) - 2 * wz * vz) * camStep
+            z += vz * camStep
+            vx += (wp * wp * (tx - fx) - 2 * wp * vx) * camStep
+            fx += vx * camStep
+            vy += (wp * wp * (ty - fy) - 2 * wp * vy) * camStep
+            fy += vy * camStep
+            path.append(SIMD3(max(1, z), fx, fy))
+        }
+        return path
+    }
+
     /// Zoom factor and focus point (normalised, top-left origin) at time t.
     func camera(at t: Double) -> (zoom: CGFloat, focus: CGPoint) {
-        guard settings.smartZoom else { return (1, CGPoint(x: 0.5, y: 0.5)) }
-        for seg in zoomTrack where t >= seg.start && t <= seg.end + Self.zoomOut {
-            let a = Self.ease((t - seg.start) / Self.zoomIn)
-            let b = 1 - Self.ease((t - seg.end) / Self.zoomOut)
-            let amount = min(a, b)
-            let z = 1 + (settings.zoomLevel - 1) * amount
-            // Follow the cursor (smoothed) while zoomed, starting from the click point.
-            var focus = seg.focus
-            if let p = log?.smoothedPosition(at: t, window: 0.35) {
-                let follow = Self.ease((t - seg.start) / 0.9)
-                focus = CGPoint(x: seg.focus.x + (p.x - seg.focus.x) * follow, y: seg.focus.y + (p.y - seg.focus.y) * follow)
-            }
-            return (CGFloat(z), focus)
-        }
-        return (1, CGPoint(x: 0.5, y: 0.5))
+        guard settings.smartZoom, !cameraPath.isEmpty else { return (1, CGPoint(x: 0.5, y: 0.5)) }
+        let f = max(0, t / Self.camStep)
+        let i = min(Int(f), cameraPath.count - 1)
+        let j = min(i + 1, cameraPath.count - 1)
+        let k = min(max(f - Double(i), 0), 1)
+        let c = cameraPath[i] + (cameraPath[j] - cameraPath[i]) * k
+        return (CGFloat(c.x), CGPoint(x: c.y, y: c.z))
     }
 
     /// Source-space crop for a camera (pixels, bottom-left origin).
