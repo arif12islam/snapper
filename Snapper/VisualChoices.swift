@@ -369,3 +369,91 @@ enum ChoiceArt {
         }
     }
 }
+
+// MARK: - Quiet settings controls
+
+/// A mini screen you click where the thing should go. The chosen spot is filled; the others are faint.
+struct PositionPad: View {
+    @Binding var selection: Int
+    let slots: [(value: Int, at: Alignment, help: String)]
+    var block = CGSize(width: 12, height: 8)
+    var round = false
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.18), lineWidth: 1)
+            ForEach(slots.indices, id: \.self) { i in
+                let slot = slots[i]
+                let on = slot.value == selection
+                Button { selection = slot.value } label: {
+                    shape
+                        .fill(on ? Color.accentColor : Color.primary.opacity(0.12))
+                        .frame(width: round ? block.height : block.width, height: block.height)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(slot.help)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: slot.at)
+            }
+        }
+        .frame(width: 64, height: 40)
+    }
+
+    private var shape: AnyShape {
+        round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+    }
+}
+
+/// Native segmented control with short labels or symbols, sized to its content.
+struct Segments<V: Hashable>: View {
+    @Binding var selection: V
+    let items: [(value: V, label: String, symbol: String?)]
+
+    var body: some View {
+        Picker("", selection: $selection) {
+            ForEach(items.indices, id: \.self) { i in
+                let item = items[i]
+                Group {
+                    if let symbol = item.symbol { Image(systemName: symbol).help(item.label) } else { Text(item.label) }
+                }
+                .tag(item.value)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+    }
+}
+
+/// Small picture previews with a selection ring and no captions (the name is the tooltip).
+struct PreviewPicker<V: Hashable>: View {
+    @Binding var selection: V
+    let items: [Choice<V>]
+    var size = CGSize(width: 44, height: 30)
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(items.indices, id: \.self) { i in
+                let item = items[i]
+                let on = item.value == selection
+                Button { selection = item.value } label: {
+                    item.art
+                        .frame(width: size.width - 8, height: size.height - 8)
+                        .foregroundColor(on ? .accentColor : .secondary)
+                        .frame(width: size.width, height: size.height)
+                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color(nsColor: .controlBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: on ? 2 : 1))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(item.label)
+            }
+        }
+    }
+}

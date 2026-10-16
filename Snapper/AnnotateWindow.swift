@@ -43,7 +43,14 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private let arrowSeg = NSSegmentedControl()
     private let shapeKindSeg = NSSegmentedControl()
     private let shapeStyleSeg = NSSegmentedControl()
-    private let smartCheck = NSButton(checkboxWithTitle: "Smart shapes", target: nil, action: nil)
+    /// Smart shapes as an icon toggle (lit when on) instead of a worded checkbox.
+    private let smartCheck: NSButton = {
+        let b = NSButton(image: NSImage(systemSymbolName: "wand.and.stars", accessibilityDescription: "Smart shapes") ?? NSImage(),
+                         target: nil, action: nil)
+        b.setButtonType(.pushOnPushOff)
+        b.bezelStyle = .texturedRounded
+        return b
+    }()
     private let magSlider = NSSlider(value: 2.5, minValue: 1.5, maxValue: 4, target: nil, action: nil)
     private let textPopup = ImageSegments(images: (0..<AnnotationStyle.textStyleNames.count).map { ChoiceArt.textStyle($0) },
                                           tips: AnnotationStyle.textStyleNames)
@@ -189,6 +196,16 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         button.widthAnchor.constraint(equalToConstant: 28).isActive = true
         button.heightAnchor.constraint(equalToConstant: 24).isActive = true
         return button
+    }
+
+    /// A small symbol in place of a word label; the name is its tooltip.
+    private func glyph(_ symbol: String, _ tip: String) -> NSView {
+        let v = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tip)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)) ?? NSImage())
+        v.contentTintColor = .secondaryLabelColor
+        v.toolTip = tip
+        v.setContentHuggingPriority(.required, for: .horizontal)
+        return v
     }
 
     private func label(_ s: String) -> NSTextField {
@@ -451,23 +468,23 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         fillCheck.font = .systemFont(ofSize: 11)
 
         styleGroups[.color] = row([colorWell, picker, paletteStack], spacing: 6)
-        styleGroups[.stroke] = row([label("Stroke"), widthSlider], spacing: 6)
+        styleGroups[.stroke] = row([glyph("lineweight", "Stroke width"), widthSlider], spacing: 6)
         styleGroups[.shapeKind] = row([shapeKindSeg, shapeStyleSeg], spacing: 8)
         styleGroups[.arrow] = row([arrowSeg], spacing: 6)
         styleGroups[.smart] = row([smartCheck], spacing: 6)
-        styleGroups[.zoom] = row([label("Zoom"), magSlider], spacing: 6)
+        styleGroups[.zoom] = row([glyph("plus.magnifyingglass", "Zoom"), magSlider], spacing: 6)
         bubbleSeg.target = self
         bubbleSeg.action = #selector(styleChanged)
         bubbleSeg.controlSize = .small
         bubbleSeg.selectedSegment = 0
         bubbleSeg.setToolTip("Speech bubble", forSegment: 0)
         bubbleSeg.setToolTip("Plain text", forSegment: 1)
-        styleGroups[.bubble] = row([label("Box"), bubbleSeg], spacing: 6)
-        styleGroups[.text] = row([label("Style"), textPopup], spacing: 6)
-        styleGroups[.size] = row([label("Size"), sizeSlider], spacing: 6)
-        styleGroups[.blur] = row([label("Blur"), blurPopup], spacing: 6)
-        styleGroups[.spotlight] = row([label("Shape"), spotlightPopup], spacing: 6)
-        styleGroups[.crop] = row([label("Aspect"), cropPopup], spacing: 6)
+        styleGroups[.bubble] = row([bubbleSeg], spacing: 6)
+        styleGroups[.text] = row([textPopup], spacing: 6)
+        styleGroups[.size] = row([glyph("textformat.size", "Text size"), sizeSlider], spacing: 6)
+        styleGroups[.blur] = row([blurPopup], spacing: 6)
+        styleGroups[.spotlight] = row([spotlightPopup], spacing: 6)
+        styleGroups[.crop] = row([glyph("aspectratio", "Aspect ratio"), cropPopup], spacing: 6)
 
         hintLabel.font = .systemFont(ofSize: 11)
         hintLabel.textColor = .tertiaryLabelColor
