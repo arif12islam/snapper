@@ -3,295 +3,323 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Snapper</title>
-<meta name="description" content="Screenshots that make the point. Capture, annotate, record and share from your Mac menu bar.">
-<meta name="theme-color" content="#ffc83d">
+<title>Snapper: screenshots that make the point</title>
+<meta name="description" content="Snapper is a Mac menu bar app for screenshots, markup and screen recordings. Screenshots that make the point.">
+<meta name="theme-color" content="#ffffff">
 <meta property="og:title" content="Snapper">
 <meta property="og:description" content="Screenshots that make the point.">
 <meta property="og:image" content="/og.png">
 <link rel="icon" type="image/png" href="/icon-192.png">
 <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/serif.woff2" as="font" type="font/woff2" crossorigin>
 <style>
   @font-face { font-family: "Inter"; src: url("/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
-  @font-face { font-family: "Instrument Serif"; src: url("/fonts/serif.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-  @font-face { font-family: "Instrument Serif"; src: url("/fonts/serif-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
 
   :root {
-    --ink: #1b1b4d;
-    --sun: #ffc83d;
+    --ink: #15153d;
+    --body: #4c4e6a;
+    --soft: #8a8ca6;
+    --line: #e9e9f2;
+    --bg: #ffffff;
+    --tint: #f6f7fc;
+    --navy: #1b1b4d;
+    --mark: #ff3b30;
     --coral: #ff6b5b;
+    --sun: #ffc83d;
     --mint: #6fd9b0;
     --sky: #8cb8ff;
     --lilac: #b9a2ff;
-    --pink: #ff9bcb;
-    --cream: #fff7e6;
-    --white: #ffffff;
-    --mark: #ff3b30;
-    --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    /* Soft colour washes for cards, like light falling on a desk */
+    --w-peach: linear-gradient(160deg, #fff1ea 0%, #ffd9c9 100%);
+    --w-sky: linear-gradient(160deg, #eef4ff 0%, #c4d9ff 100%);
+    --w-lilac: linear-gradient(160deg, #f4f0ff 0%, #d9cdfd 100%);
+    --w-mint: linear-gradient(160deg, #ecfbf4 0%, #bdeed9 100%);
+    --w-sun: linear-gradient(160deg, #fff8e2 0%, #ffe39a 100%);
+    --w-night: linear-gradient(160deg, #2a2a6e 0%, #15153d 100%);
+    --radius: 28px;
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --lip: 48px;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-  body { margin: 0; background: var(--ink); color: var(--ink); font: 17px/1.6 var(--sans); overflow-x: hidden; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--sans); overflow-x: hidden; }
   a { color: inherit; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+  img { max-width: 100%; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
-  h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.015em; margin: 0; }
-  h1 { font-size: clamp(60px, 9vw, 128px); line-height: 0.92; }
-  h2 { font-size: clamp(44px, 6vw, 84px); line-height: 0.98; }
-  h3 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.02em; }
+  :focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+  h1, h2, h3 { margin: 0; color: var(--ink); letter-spacing: -0.035em; }
+  h1 { font-size: clamp(46px, 7vw, 84px); line-height: 1.02; font-weight: 800; }
+  h2 { font-size: clamp(34px, 4.4vw, 54px); line-height: 1.06; font-weight: 780; }
+  h3 { font-size: 21px; line-height: 1.25; font-weight: 720; letter-spacing: -0.02em; }
   p { margin: 0; }
-
-  /* Sections stack like a pile of stickers: each colour block overlaps the one before with a rounded lip. */
-  .block { position: relative; border-radius: var(--lip) var(--lip) 0 0; margin-top: calc(var(--lip) * -1); padding: calc(96px + var(--lip)) 0 120px; overflow: hidden; }
-  .sun { background: var(--sun); border-radius: 0; margin-top: 0; padding: 0; }
-  .ink { background: var(--ink); color: var(--white); }
-  .lilac { background: var(--lilac); }
-  .sky { background: var(--sky); }
-  .coral { background: var(--coral); }
-  .mint { background: var(--mint); }
-
-  /* Little doodles: sparkles and squiggles in flat colour */
-  .spark { position: absolute; width: 34px; height: 34px; pointer-events: none; }
-  .spark path { fill: currentColor; }
-  .squiggle { position: absolute; pointer-events: none; overflow: visible; }
-  .squiggle path { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: round; }
+  .muted { color: var(--body); }
 
   /* ---------- Nav ---------- */
-  nav { display: flex; align-items: center; gap: 26px; padding: 22px 0; position: relative; z-index: 2; }
+  header.top { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(1.6) blur(14px); -webkit-backdrop-filter: saturate(1.6) blur(14px); border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+  header.top.scrolled { border-bottom-color: var(--line); }
+  nav { display: flex; align-items: center; gap: 30px; height: 72px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; margin-right: auto; }
-  .brand img { width: 32px; height: 32px; border-radius: 9px; }
-  nav a.link { font-size: 15px; font-weight: 650; text-decoration: none; }
-  nav a.link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
-  .pill { display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border-radius: 999px; background: var(--ink); color: var(--white); font-size: 15px; font-weight: 700; text-decoration: none; }
-  .pill:hover { background: #2a2a6b; }
+  .brand img { width: 34px; height: 34px; border-radius: 9px; }
+  nav a.link { font-size: 15px; font-weight: 550; color: var(--ink); text-decoration: none; opacity: 0.82; }
+  nav a.link:hover { opacity: 1; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 14px; border: 0; cursor: pointer;
+    font: inherit; font-size: 16px; font-weight: 650; text-decoration: none; white-space: nowrap; color: #fff; background: var(--navy);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 8px 20px rgba(27, 27, 77, 0.22); transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 12px 26px rgba(27, 27, 77, 0.28); }
+  .btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+  .btn.small { height: 40px; padding: 0 16px; font-size: 15px; border-radius: 12px; }
+  .btn.ghost { color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--line) inset, 0 2px 6px rgba(27, 27, 77, 0.06); }
+  .btn.ghost svg { width: 16px; height: 16px; }
+  .text-link { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; color: var(--navy); text-decoration: none; }
+  .text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 
   /* ---------- Hero ---------- */
-  .hero { display: grid; grid-template-columns: 1.02fr 1fr; gap: 48px; align-items: center; padding: 48px 0 calc(120px + var(--lip)); position: relative; }
-  .hero h1 { max-width: 7.4em; }
-  .hero .mark { position: relative; white-space: nowrap; }
-  .hero .circle { position: absolute; left: -7%; top: 2%; width: 114%; height: 104%; overflow: visible; pointer-events: none; }
-  .hero .circle path { fill: none; stroke: var(--mark); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.7s 0.5s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
-  .lead { margin-top: 42px; font-size: 20px; max-width: 30em; }
-  form { display: flex; gap: 8px; margin-top: 30px; max-width: 490px; }
+  .hero { position: relative; text-align: center; padding: 84px 0 0; }
+  .haze { position: absolute; inset: -80px 0 auto; height: 760px; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 18% 30%, rgba(140, 184, 255, 0.28), transparent 70%),
+      radial-gradient(36% 46% at 82% 24%, rgba(185, 162, 255, 0.26), transparent 70%),
+      radial-gradient(40% 40% at 50% 70%, rgba(255, 107, 91, 0.12), transparent 70%); }
+  .chip { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 6px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 14px; font-weight: 600; }
+  .chip i { display: inline-grid; place-items: center; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--coral); font-style: normal; font-size: 12px; font-weight: 750; }
+  .hero h1 { margin: 26px auto 0; max-width: 11em; }
+  .mark { position: relative; white-space: nowrap; }
+  .mark svg { position: absolute; left: -6%; top: -4%; width: 112%; height: 112%; overflow: visible; pointer-events: none; }
+  .mark path { fill: none; stroke: var(--mark); stroke-width: 4.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.8s 0.4s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
+  .hero .sub { margin: 22px auto 0; max-width: 34em; font-size: 20px; color: var(--body); }
+  form { display: flex; gap: 8px; justify-content: center; margin: 34px auto 0; max-width: 520px; }
   input[type="email"] {
-    flex: 1; min-width: 0; height: 58px; padding: 0 20px; font: inherit; font-size: 17px; color: var(--ink); background: var(--white);
-    border: 3px solid var(--ink); border-radius: 18px; outline: none;
+    flex: 1; min-width: 0; height: 48px; padding: 0 16px; font: inherit; font-size: 16px; color: var(--ink); background: #fff;
+    border: 0; border-radius: 14px; outline: none; box-shadow: 0 0 0 1px var(--line) inset, 0 2px 6px rgba(27, 27, 77, 0.05);
   }
-  input[type="email"]::placeholder { color: #7d7fa0; }
-  input[type="email"]:focus-visible { box-shadow: 4px 4px 0 var(--ink); }
-  .btn {
-    height: 58px; padding: 0 26px; font: inherit; font-size: 17px; font-weight: 750; cursor: pointer; white-space: nowrap;
-    color: var(--white); background: var(--ink); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--coral);
-    transition: transform 0.12s, box-shadow 0.12s;
-  }
-  .btn:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--coral); }
-  .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--coral); }
-  .btn:disabled { opacity: 0.6; cursor: default; }
+  input[type="email"]::placeholder { color: var(--soft); }
+  input[type="email"]:focus-visible { box-shadow: 0 0 0 2px var(--sky) inset; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   .status { min-height: 1.5em; margin-top: 12px; font-size: 15px; font-weight: 600; }
-  .status.ok { color: #0f5a33; }
-  .status.err { color: #9e1c13; }
-  .fine { font-size: 14px; opacity: 0.72; }
+  .status.ok { color: #16804a; }
+  .status.err { color: #c0392b; }
+  .hero-links { display: flex; justify-content: center; gap: 18px; align-items: center; margin-top: 4px; font-size: 15px; color: var(--soft); }
 
-  /* Product shot with sticker chips around it */
-  .shot-wrap { position: relative; }
-  .shot { margin: 0; background: var(--coral); border-radius: 30px; padding: 7%; transform: rotate(2deg); box-shadow: 12px 12px 0 var(--ink); animation: settle 1s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-  .shot-inner { position: relative; border-radius: 12px; overflow: hidden; background: var(--white); }
-  .shot img { display: block; width: 100%; height: auto; aspect-ratio: 11 / 7; }
-  .marks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .marks .draw { fill: none; stroke: var(--mark); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ink 0.6s 1s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
-  .marks .d2 { animation-delay: 1.5s; animation-duration: 0.4s; }
-  .marks .head { fill: var(--mark); opacity: 0; animation: appear 0.15s 1.85s forwards; }
-  .shot .dot { position: absolute; display: grid; place-items: center; width: 7%; aspect-ratio: 1; border-radius: 50%; background: var(--mark); color: #fff; font-weight: 800; font-size: clamp(11px, 1.3vw, 17px); border: 3px solid #fff; transform: translate(-50%, -50%) scale(0); animation: pop 0.4s 1.55s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
-  .shot .tag { position: absolute; left: 39%; top: 40.5%; padding: 0.5% 1.6%; border-radius: 8px; background: var(--mark); color: #fff; font-weight: 700; font-size: clamp(11px, 1.35vw, 18px); white-space: nowrap; opacity: 0; transform: translateY(6px); animation: callout 0.4s 2s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
-  .sticker {
-    position: absolute; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px 10px 14px; border-radius: 999px;
-    border: 3px solid var(--ink); font-weight: 750; font-size: 16px; white-space: nowrap; box-shadow: 4px 4px 0 var(--ink);
-    opacity: 0; animation: stick 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) forwards;
+  /* The film sits on a wallpaper, the way a screenshot sits on a Snapper background */
+  .stage { position: relative; margin: 56px auto 0; max-width: 1120px; padding: clamp(14px, 3.4vw, 44px); border-radius: 36px;
+    background: radial-gradient(70% 90% at 0% 0%, #ffc4b6 0%, transparent 60%), radial-gradient(70% 90% at 100% 0%, #c8b6ff 0%, transparent 60%), radial-gradient(80% 90% at 50% 100%, #9cc3ff 0%, transparent 70%), #e8eeff; }
+  .screen { border-radius: 18px; overflow: hidden; background: var(--navy); box-shadow: 0 30px 70px rgba(27, 27, 77, 0.3); }
+  .screen video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
+  .screen video::cue { background: rgba(21, 21, 61, 0.9); color: #fff; font-family: var(--sans); font-weight: 600; }
+  .player { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 16px auto 0; max-width: 1120px; }
+  .chapters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chapters button, .ctl {
+    display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--tint);
   }
-  .sticker svg { width: 18px; height: 18px; }
-  .st1 { left: -6%; top: 6%; background: var(--mint); --r: -8deg; animation-delay: 2.3s; }
-  .st2 { right: -4%; top: -6%; background: var(--lilac); --r: 6deg; animation-delay: 2.45s; }
-  .st3 { right: 4%; bottom: -7%; background: var(--sky); --r: -4deg; animation-delay: 2.6s; }
-  .st4 { left: 8%; bottom: -5%; background: var(--pink); --r: 5deg; animation-delay: 2.75s; }
-  @keyframes stick { from { opacity: 0; transform: rotate(var(--r)) scale(0.6); } to { opacity: 1; transform: rotate(var(--r)) scale(1); } }
-  @keyframes settle { from { transform: rotate(8deg) translateY(40px); opacity: 0; } }
-  @keyframes ink { to { stroke-dashoffset: 0; } }
-  @keyframes appear { to { opacity: 1; } }
-  @keyframes pop { to { transform: translate(-50%, -50%) scale(1); } }
-  @keyframes callout { to { opacity: 1; transform: none; } }
+  .chapters button .n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; font-size: 12px; font-weight: 750; }
+  .chapters button.active { background: var(--navy); color: #fff; }
+  .chapters button.active .n { background: var(--mark); color: #fff; }
+  .controls { display: flex; gap: 8px; }
+  .ctl svg { width: 16px; height: 16px; }
+  .ctl.hot { background: var(--navy); color: #fff; }
 
-  /* ---------- Film ---------- */
-  .film-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
-  .controls { display: flex; gap: 8px; flex: none; }
-  .ctl {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; min-width: 46px; padding: 0 18px; border-radius: 999px; cursor: pointer;
-    font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--white); border: 0;
-  }
-  .ctl.hot { background: var(--sun); }
-  .ctl svg { width: 18px; height: 18px; }
-  .screen { border-radius: 26px; overflow: hidden; border: 4px solid var(--white); }
-  .screen video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: #13133a; }
-  .screen video::cue { background: rgba(27, 27, 77, 0.9); color: #fff; font-family: var(--sans); font-weight: 600; }
-  .chapters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
-  .chapters button {
-    display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 16px; border-radius: 16px; cursor: pointer; text-align: left;
-    font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); border: 3px solid transparent;
-  }
-  .chapters button:nth-child(1) { background: var(--sky); }
-  .chapters button:nth-child(2) { background: var(--coral); }
-  .chapters button:nth-child(3) { background: var(--sun); }
-  .chapters button:nth-child(4) { background: var(--mint); }
-  .chapters button.active { border-color: var(--white); }
-  .num { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--white); font-weight: 800; font-size: 13px; flex: none; }
+  main > section.wrap { margin-top: 140px; }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 40px; }
+  .section-head p { margin-top: 14px; font-size: 19px; color: var(--body); max-width: 36em; }
+
+  /* ---------- Split rows ---------- */
+  .split { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 72px; align-items: center; }
+  .split.flip { grid-template-columns: 1.15fr 0.85fr; }
+  .split.flip .copy { order: 2; }
+  .split .copy p { margin-top: 16px; font-size: 19px; color: var(--body); }
+  .ticks { list-style: none; padding: 0; margin: 24px 0 26px; display: grid; gap: 10px; }
+  .ticks li { display: flex; gap: 12px; align-items: start; color: var(--ink); font-weight: 520; }
+  .ticks li::before { content: ""; flex: none; width: 20px; height: 20px; margin-top: 3px; border-radius: 50%; background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315153d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E") center / 14px no-repeat; }
+  .visual { border-radius: var(--radius); padding: clamp(22px, 4vw, 48px); overflow: hidden; position: relative; }
+  .frame { border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 24px 50px rgba(27, 27, 77, 0.2); }
+  .frame svg, .frame img { display: block; width: 100%; height: auto; }
+
+  /* ---------- Tool cards (a row that scrolls sideways) ---------- */
+  .rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(300px, 30%); gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 32px 24px; margin: 0 -32px; scrollbar-width: none; scroll-padding-inline: 32px; }
+  .rail::-webkit-scrollbar { display: none; }
+  .tool-card { scroll-snap-align: start; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--line) inset; overflow: hidden; display: flex; flex-direction: column; }
+  .tool-card header { display: flex; align-items: center; gap: 10px; padding: 18px 20px; font-weight: 700; font-size: 17px; }
+  .tool-card header svg { width: 22px; height: 22px; color: var(--navy); }
+  .tool-card .art { flex: 1; padding: 20px; display: flex; align-items: center; justify-content: center; min-height: 230px; }
+  .tool-card .art .frame { width: 100%; }
+  .tool-card p { padding: 0 20px 20px; margin-top: -4px; font-size: 15px; color: var(--body); }
+  .rail-nav { display: flex; gap: 8px; }
+  .rail-nav button { width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; background: var(--tint); color: var(--ink); display: grid; place-items: center; }
+  .rail-nav button svg { width: 18px; height: 18px; }
+
+  /* ---------- Bento ---------- */
+  .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
+  .tile { border-radius: var(--radius); padding: 30px; overflow: hidden; position: relative; min-height: 320px; display: flex; flex-direction: column; }
+  .tile p { margin-top: 8px; font-size: 16px; color: var(--body); max-width: 26em; }
+  .tile.dark h3, .tile.dark p { color: #fff; }
+  .tile.dark p { opacity: 0.78; }
+  .tile .art { margin-top: auto; padding-top: 26px; }
+  .span-2 { grid-column: span 2; } .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; }
+
+  /* Small product props used inside tiles */
+  .rec { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 18px; border-radius: 999px; background: #fff; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25); }
+  .rec i { width: 12px; height: 12px; border-radius: 50%; background: var(--mark); animation: blink 1.2s steps(2) infinite; }
+  .gif { display: grid; place-items: center; width: 150px; height: 110px; border-radius: 22px; background: #fff; font-size: 44px; font-weight: 850; letter-spacing: -0.04em; color: var(--navy); box-shadow: 0 16px 34px rgba(27, 27, 77, 0.2); transform: rotate(-4deg); }
+  .strip { position: relative; display: flex; gap: 5px; height: 74px; max-width: 760px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 12px 28px rgba(27, 27, 77, 0.16); }
+  .strip span { flex: 1; border-radius: 6px; }
+  .strip .keep { position: absolute; top: -5px; bottom: -5px; left: 18%; right: 22%; border: 4px solid var(--navy); border-radius: 12px; }
+  .menubar { border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 16px 34px rgba(27, 27, 77, 0.18); font-size: 14px; }
+  .menubar .bar { display: flex; align-items: center; justify-content: flex-end; gap: 14px; height: 34px; padding: 0 14px; background: rgba(21, 21, 61, 0.9); color: #fff; font-weight: 600; }
+  .menubar .bar img { width: 20px; height: 20px; border-radius: 5px; outline: 2px solid rgba(255, 255, 255, 0.5); }
+  .menubar ul { list-style: none; margin: 0; padding: 8px; }
+  .menubar li { padding: 8px 12px; border-radius: 8px; font-weight: 550; }
+  .menubar li.on { background: var(--sky); }
+  .pinned { position: relative; height: 170px; border-radius: 16px; background: linear-gradient(135deg, #ffc4b6, #c8b6ff); overflow: hidden; }
+  .pinned .frame { position: absolute; right: 14px; top: 14px; width: 54%; transform: rotate(3deg); }
+  .pinned .pin { position: absolute; right: 44%; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--mark); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); }
+  .long { height: 170px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 16px 34px rgba(27, 27, 77, 0.18); position: relative; }
+  .long img { position: absolute; left: 0; top: 0; width: 100%; animation: scrollshot 9s ease-in-out infinite alternate; }
+  .ocr { display: flex; flex-direction: column; gap: 10px; align-items: start; }
+  .ocr .sel { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; background: rgba(140, 184, 255, 0.55); padding: 0 8px; border-radius: 6px; }
+  .ocr .copied { display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 14px; font-weight: 650; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  @keyframes scrollshot { to { transform: translateY(-48%); } }
 
   /* ---------- Try it ---------- */
-  .try-head { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 30px; }
-  .try-head p { margin-top: 14px; font-size: 19px; max-width: 30em; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .tool { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 14px; cursor: pointer; font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--white); border: 3px solid var(--ink); }
-  .tool svg { width: 18px; height: 18px; }
-  .tool[aria-pressed="true"] { background: var(--ink); color: var(--white); }
-  .swatches { display: flex; gap: 6px; margin-left: 4px; }
-  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ink); cursor: pointer; padding: 0; transition: transform 0.15s; }
-  .swatch[aria-pressed="true"] { transform: scale(1.18); box-shadow: 0 0 0 3px var(--white); }
-  .stage { --frame: var(--coral); background: var(--frame); border-radius: 30px; padding: clamp(18px, 4vw, 54px); border: 4px solid var(--ink); box-shadow: 12px 12px 0 var(--ink); transition: background 0.35s ease; }
-  .board { position: relative; border-radius: 14px; overflow: hidden; background: var(--white); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+  .try { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 56px; align-items: center; }
+  .try .copy p { margin-top: 16px; font-size: 19px; color: var(--body); }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .tool { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 12px; border: 0; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--tint); }
+  .tool svg { width: 16px; height: 16px; }
+  .tool[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .swatches { display: flex; gap: 8px; margin-top: 18px; align-items: center; font-size: 14px; color: var(--soft); }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset; transition: transform 0.15s; }
+  .swatch[aria-pressed="true"] { transform: scale(1.15); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--navy); }
+  .board-stage { --frame: var(--w-peach); background: var(--frame); border-radius: var(--radius); padding: clamp(18px, 4vw, 48px); transition: background 0.35s; }
+  .board { position: relative; border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 24px 50px rgba(27, 27, 77, 0.2); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
   .board img { display: block; width: 100%; height: auto; aspect-ratio: 11 / 7; pointer-events: none; }
   .board canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 18px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 15px; font-weight: 700; pointer-events: none; transition: opacity 0.3s; }
+  .hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 650; pointer-events: none; transition: opacity 0.3s; }
   .board.used .hint { opacity: 0; }
 
-  /* ---------- Steps: a real sequence, so numbered ---------- */
-  .steps ol { list-style: none; margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .steps li { border-radius: 26px; padding: 28px 26px 32px; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
-  .steps li:nth-child(1) { background: var(--sun); transform: rotate(-1.5deg); }
-  .steps li:nth-child(2) { background: var(--coral); transform: rotate(1deg); }
-  .steps li:nth-child(3) { background: var(--mint); transform: rotate(-0.8deg); }
-  .steps li:nth-child(4) { background: var(--white); transform: rotate(1.4deg); }
-  .steps .big { display: block; font-family: var(--serif); font-size: 84px; line-height: 0.8; margin-bottom: 18px; }
-  .steps p { font-size: 16px; }
-  kbd { display: inline-grid; place-items: center; min-width: 34px; height: 34px; padding: 0 8px; margin: 14px 4px 0 0; border-radius: 9px; font: 750 15px/1 var(--sans); color: var(--white); background: var(--ink); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
-
-  /* ---------- Everything it does: two slow rows of tags ---------- */
-  .rows { margin-top: 40px; display: grid; gap: 14px; }
-  .row { display: flex; gap: 12px; width: max-content; animation: drift 60s linear infinite; }
-  .row.rev { animation-direction: reverse; }
-  .row span { padding: 14px 24px; border-radius: 999px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; border: 3px solid var(--ink); white-space: nowrap; }
-  .row span:nth-child(5n+1) { background: var(--white); }
-  .row span:nth-child(5n+2) { background: var(--sun); }
-  .row span:nth-child(5n+3) { background: var(--mint); }
-  .row span:nth-child(5n+4) { background: var(--lilac); }
-  .row span:nth-child(5n+5) { background: var(--sky); }
-  @keyframes drift { to { transform: translateX(-50%); } }
-
   /* ---------- Closing ---------- */
-  .closing { text-align: center; }
-  .closing h2 { font-size: clamp(64px, 10vw, 150px); }
-  .closing p { margin: 22px auto 0; max-width: 30em; font-size: 20px; }
-  .closing .btn { display: inline-flex; align-items: center; margin-top: 34px; text-decoration: none; box-shadow: 5px 5px 0 var(--white); }
-  .closing .btn:hover { box-shadow: 7px 7px 0 var(--white); }
+  .closing { text-align: center; padding-bottom: 140px; }
+  main > section.wrap.closing { margin-top: 160px; }
+  .closing img { width: 96px; height: 96px; border-radius: 24px; box-shadow: 0 18px 40px rgba(27, 27, 77, 0.25); }
+  .closing h2 { margin: 28px auto 0; font-size: clamp(40px, 6vw, 72px); max-width: 12em; }
+  .closing p { margin: 18px auto 0; font-size: 19px; color: var(--body); max-width: 30em; }
+  .closing .btn { margin-top: 32px; }
 
-  footer { position: relative; overflow: hidden; background: var(--ink); color: rgba(255, 255, 255, 0.6); font-size: 14px; border-radius: var(--lip) var(--lip) 0 0; margin-top: calc(var(--lip) * -1); }
-  footer .wrap { display: flex; justify-content: space-between; gap: 16px; padding-top: calc(28px + 8px); padding-bottom: 36px; }
-  .swimmer { position: absolute; left: 0; bottom: 70px; width: 54px; height: auto; animation: swim 46s linear infinite; pointer-events: none; }
+  footer { position: relative; overflow: hidden; border-top: 1px solid var(--line); font-size: 15px; color: var(--body); }
+  .foot { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; padding: 48px 0 32px; }
+  .foot h4 { margin: 0 0 12px; font-size: 14px; color: var(--ink); }
+  .foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .foot a { text-decoration: none; }
+  .foot a:hover { color: var(--ink); }
+  .legal { display: flex; justify-content: space-between; gap: 16px; padding: 18px 0 36px; font-size: 14px; color: var(--soft); border-top: 1px solid var(--line); }
+  .swimmer { position: absolute; left: 0; bottom: 64px; width: 46px; height: auto; animation: swim 50s linear infinite; pointer-events: none; opacity: 0.9; }
   .swimmer .t { transform-origin: 150px 266px; animation: tail 0.9s ease-in-out infinite; }
   @keyframes swim { from { transform: translateX(-80px); } to { transform: translateX(calc(100vw + 80px)); } }
   @keyframes tail { 50% { transform: rotate(8deg); } }
+  @keyframes ink { to { stroke-dashoffset: 0; } }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    .marks .draw, .hero .circle path { stroke-dashoffset: 0; }
-    .marks .head, .shot .tag, .sticker { opacity: 1; transform: rotate(var(--r, 0deg)); }
-    .shot .dot { transform: translate(-50%, -50%); }
-    .row { flex-wrap: wrap; width: auto; }
+    .mark path { stroke-dashoffset: 0; }
   }
-  @media (max-width: 980px) {
-    .hero { grid-template-columns: 1fr; gap: 64px; }
-    .shot-wrap { max-width: 640px; }
-    .steps ol { grid-template-columns: 1fr 1fr; }
-    .try-head { flex-direction: column; align-items: start; }
+  @media (max-width: 1000px) {
+    .split, .split.flip, .try { grid-template-columns: 1fr; gap: 40px; }
+    .split.flip .copy { order: 0; }
+    .rail { grid-auto-columns: minmax(280px, 46%); }
+    .bento { grid-template-columns: 1fr 1fr; }
+    .span-2, .span-3, .span-4, .span-6 { grid-column: span 1; }
+    .bento .wide { grid-column: span 2; }
   }
-  @media (max-width: 620px) {
-    :root { --lip: 32px; }
-    .spark, .squiggle { display: none; }
+  @media (max-width: 640px) {
     .wrap { padding: 0 18px; }
     nav a.link { display: none; }
-    .hero { padding-top: 20px; }
-    .lead { font-size: 18px; margin-top: 36px; }
+    nav { gap: 12px; }
+    .hero { padding-top: 48px; }
+    .hero .sub { font-size: 18px; }
     form { flex-direction: column; }
     input[type="email"] { flex: none; width: 100%; }
     form .btn { width: 100%; }
-    .block { padding: calc(64px + var(--lip)) 0 88px; }
-    .sun { padding-top: 0; }
-    .film-head { flex-direction: column; align-items: start; }
-    .chapters { grid-template-columns: 1fr 1fr; }
-    .steps ol { grid-template-columns: 1fr; }
-    .sticker { font-size: 13px; padding: 7px 12px 7px 10px; }
-    .row span { font-size: 18px; padding: 10px 18px; }
-    footer .wrap { flex-direction: column; }
+    main > section.wrap { margin-top: 96px; }
+    .section-head { flex-direction: column; align-items: start; }
+    .rail { grid-auto-columns: 84%; padding: 4px 18px 20px; margin: 0 -18px; scroll-padding-inline: 18px; }
+    .bento { grid-template-columns: 1fr; }
+    .bento .wide { grid-column: span 1; }
+    .tile { min-height: 0; }
+    .player { flex-direction: column; align-items: stretch; }
+    .foot { grid-template-columns: 1fr 1fr; }
+    .foot > div:first-child { grid-column: span 2; }
+    .legal { flex-direction: column; }
+    .closing { padding-bottom: 96px; }
+    main > section.wrap.closing { margin-top: 110px; }
   }
 </style>
 </head>
 <body>
 
-<section class="block sun">
-  <svg class="spark" style="left:4%;top:150px;color:var(--white)" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <svg class="spark" style="left:48%;top:96px;width:22px;height:22px;color:var(--ink)" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <svg class="squiggle" style="right:3%;bottom:150px;width:140px;color:var(--coral)" viewBox="0 0 140 30" aria-hidden="true"><path d="M4 15 C 18 2, 30 28, 46 15 S 74 2, 90 15 S 118 28, 136 15"/></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="soft-blur"><feGaussianBlur stdDeviation="7"/></filter>
+    <clipPath id="email-cell"><rect x="472" y="575" width="250" height="34" rx="6"/></clipPath>
+    <clipPath id="loupe"><circle cx="640" cy="182" r="74"/></clipPath>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 19L19 5M10 5h9v9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-num" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M11 9l2-1v8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-blur" viewBox="0 0 24 24"><g fill="currentColor"><rect x="4" y="4" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="4" width="4.5" height="4.5" rx="1" opacity=".6"/><rect x="15.5" y="4" width="4.5" height="4.5" rx="1"/><rect x="4" y="9.75" width="4.5" height="4.5" rx="1" opacity=".6"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="15.5" y="9.75" width="4.5" height="4.5" rx="1" opacity=".6"/><rect x="4" y="15.5" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="15.5" width="4.5" height="4.5" rx="1" opacity=".6"/><rect x="15.5" y="15.5" width="4.5" height="4.5" rx="1"/></g></symbol>
+    <symbol id="i-mag" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 16l5 5M10.5 7.5v6M7.5 10.5h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-bg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="7" y="8" width="10" height="8" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-crop" viewBox="0 0 24 24"><path d="M7 2v15h15M2 7h15v15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="top">
   <div class="wrap">
     <nav>
-      <a class="brand" href="/"><img src="/icon-192.png" alt="" width="32" height="32">Snapper</a>
-      <a class="link" href="#film">Watch</a>
+      <a class="brand" href="/"><img src="/icon-192.png" alt="" width="34" height="34">Snapper</a>
+      <a class="link" href="#features">Features</a>
+      <a class="link" href="#recording">Recording</a>
       <a class="link" href="#try">Try it</a>
-      <a class="pill" href="#request">Request access</a>
+      <a class="btn small" href="#request">Request access</a>
     </nav>
-
-    <header class="hero" id="request">
-      <div>
-        <h1>Screenshots that make the <span class="mark">point.<svg class="circle" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 34 C 300 4, 120 2, 46 26 C -4 46, 6 106, 90 122 C 190 140, 360 128, 392 88 C 410 60, 380 30, 330 18"/></svg></span></h1>
-        <p class="lead">Snapper is a menu bar app for Mac. Capture any part of your screen, mark it up, record it, and paste it anywhere.</p>
-        <form class="invite-form" novalidate>
-          <label class="sr" for="email">Email address</label>
-          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
-          <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <button class="btn" type="submit">Request access</button>
-        </form>
-        <p class="status" role="status" aria-live="polite"></p>
-        <p class="fine">If your email is on the invite list, we send you a download link. Apple Silicon, macOS 14 or later.</p>
-      </div>
-
-      <div class="shot-wrap">
-        <figure class="shot" aria-label="A screenshot annotated in Snapper: a box around monthly revenue, an arrow to the best month, and a label">
-          <div class="shot-inner">
-            <img src="/media/app-shot.png" alt="" width="1100" height="700">
-            <svg class="marks" viewBox="0 0 1100 700" aria-hidden="true">
-              <rect class="draw" x="222" y="128" width="290" height="126" rx="10" pathLength="1"/>
-              <path class="draw d2" pathLength="1" d="M 690 312 L 846 326"/>
-              <path class="head" d="M 862 328 L 832 342 L 836 312 Z"/>
-            </svg>
-            <span class="dot" style="left:20.2%;top:18.3%">1</span>
-            <span class="tag">Best month yet</span>
-          </div>
-        </figure>
-        <span class="sticker st1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M10 5h9v9"/></svg>Arrows</span>
-        <span class="sticker st2"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="4" height="4" rx="1"/><rect x="10" y="5" width="4" height="4" rx="1"/><rect x="15" y="5" width="4" height="4" rx="1"/><rect x="5" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="15" y="10" width="4" height="4" rx="1"/><rect x="5" y="15" width="4" height="4" rx="1"/><rect x="10" y="15" width="4" height="4" rx="1"/><rect x="15" y="15" width="4" height="4" rx="1"/></svg>Blur</span>
-        <span class="sticker st3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5M10.5 7.5v6M7.5 10.5h6"/></svg>Magnifier</span>
-        <span class="sticker st4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M11 9l2-1v8"/></svg>Numbers</span>
-      </div>
-    </header>
   </div>
-</section>
+</header>
 
-<section class="block ink" id="film">
-  <svg class="spark" style="right:6%;top:92px;color:var(--sun)" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <div class="wrap">
-    <div class="film-head">
-      <h2>See it in 46 seconds.</h2>
+<main>
+  <div class="wrap hero" id="request">
+    <div class="haze" aria-hidden="true"></div>
+    <span class="chip"><i>Alpha</i>Now inviting early users</span>
+    <h1>Screenshots that make the <span class="mark">point.<svg viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M 360 34 C 300 4, 120 2, 46 26 C -4 46, 6 106, 90 122 C 190 140, 360 128, 392 88 C 410 60, 380 30, 330 18"/></svg></span></h1>
+    <p class="sub">The Mac menu bar app for screenshots, markup and screen recordings. Capture it, point at what matters, and paste it anywhere.</p>
+    <form class="invite-form" novalidate>
+      <label class="sr" for="email">Email address</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" type="submit">Request access</button>
+    </form>
+    <p class="status" role="status" aria-live="polite"></p>
+    <div class="hero-links">
+      <span>Invite only. If you are on the list, a download link lands in your inbox.</span>
+    </div>
+
+    <div class="stage">
+      <div class="screen">
+        <video id="film-video" autoplay muted loop playsinline preload="metadata" poster="/media/snapper-poster.jpg"
+               aria-label="Snapper tour: a screenshot is captured, annotated, framed, pasted into a chat, recorded and trimmed">
+          <source src="/media/snapper-explainer.mp4" type="video/mp4">
+          <source src="/media/snapper-explainer.webm" type="video/webm">
+          <track kind="captions" src="/media/snapper-explainer.vtt" srclang="en" label="English">
+        </video>
+      </div>
+    </div>
+    <div class="player">
+      <div class="chapters" id="chapters">
+        <button type="button" data-t="14"><span class="n">1</span>Capture</button>
+        <button type="button" data-t="17.3"><span class="n">2</span>Mark it up</button>
+        <button type="button" data-t="25.4"><span class="n">3</span>Frame it</button>
+        <button type="button" data-t="27.9"><span class="n">4</span>Paste it</button>
+      </div>
       <div class="controls">
         <button class="ctl" id="sound" type="button" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9.5a4 4 0 0 1 0 5M19.5 7a7.5 7.5 0 0 1 0 10"/></svg>
@@ -303,93 +331,215 @@
         </button>
       </div>
     </div>
-    <div class="screen">
-      <video id="film-video" autoplay muted loop playsinline preload="metadata" poster="/media/snapper-poster.jpg"
-             aria-label="Snapper tour: a screenshot is captured, annotated, framed, shared, recorded and trimmed">
-        <source src="/media/snapper-explainer.mp4" type="video/mp4">
-        <source src="/media/snapper-explainer.webm" type="video/webm">
-        <track kind="captions" src="/media/snapper-explainer.vtt" srclang="en" label="English">
-      </video>
-    </div>
-    <div class="chapters" id="chapters">
-      <button type="button" data-t="14"><span class="num">1</span>Capture</button>
-      <button type="button" data-t="17.3"><span class="num">2</span>Mark it up</button>
-      <button type="button" data-t="25.4"><span class="num">3</span>Frame it</button>
-      <button type="button" data-t="27.9"><span class="num">4</span>Paste it</button>
-    </div>
   </div>
-</section>
 
-<section class="block lilac" id="try">
-  <svg class="squiggle" style="left:4%;top:120px;width:120px;color:var(--white)" viewBox="0 0 140 30" aria-hidden="true"><path d="M4 15 C 18 2, 30 28, 46 15 S 74 2, 90 15 S 118 28, 136 15"/></svg>
-  <div class="wrap">
-    <div class="try-head">
-      <div>
-        <h2>Go on, mark it up.</h2>
-        <p>Drag across the screenshot to draw. Pick a background colour the way you would in the app.</p>
+  <!-- One shortcut away -->
+  <section class="wrap">
+    <div class="split">
+      <div class="copy">
+        <h2>Always one shortcut away.</h2>
+        <p>Snapper waits in the menu bar. Press a shortcut, drag over anything on screen, and the editor opens with your shot ready to mark up.</p>
+        <ul class="ticks">
+          <li>An area, a window or the whole screen</li>
+          <li>Long pages with scrolling capture</li>
+          <li>Copy, save or pin the result in a click</li>
+        </ul>
       </div>
-      <div class="toolbar" role="group" aria-label="Drawing tools">
-        <button class="tool" type="button" data-tool="arrow" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M10 5h9v9"/></svg>Arrow</button>
-        <button class="tool" type="button" data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Box</button>
-        <button class="tool" type="button" data-tool="number" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="8.5"/><path d="M11 9l2-1v8" stroke-linecap="round" stroke-linejoin="round"/></svg>Number</button>
-        <button class="tool" type="button" id="undo">Undo</button>
-        <button class="tool" type="button" id="clear">Clear</button>
-        <div class="swatches" role="group" aria-label="Background colour">
-          <button class="swatch" type="button" data-frame="#ff6b5b" style="background:#ff6b5b" aria-label="Coral background" aria-pressed="true"></button>
-          <button class="swatch" type="button" data-frame="#ffc83d" style="background:#ffc83d" aria-label="Sun background" aria-pressed="false"></button>
-          <button class="swatch" type="button" data-frame="#6fd9b0" style="background:#6fd9b0" aria-label="Mint background" aria-pressed="false"></button>
-          <button class="swatch" type="button" data-frame="#8cb8ff" style="background:#8cb8ff" aria-label="Sky background" aria-pressed="false"></button>
+      <div class="visual" style="background: var(--w-sky)">
+        <div class="frame">
+          <svg viewBox="0 0 1100 700" aria-label="A dashboard screenshot with a box around monthly revenue and an arrow to the best month">
+            <image href="/media/app-shot.png" width="1100" height="700"/>
+            <rect x="222" y="128" width="290" height="126" rx="10" fill="none" stroke="#ff3b30" stroke-width="7"/>
+            <circle cx="222" cy="128" r="20" fill="#ff3b30" stroke="#fff" stroke-width="5"/><text x="222" y="136" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="Inter, sans-serif">1</text>
+            <line x1="690" y1="312" x2="842" y2="325" stroke="#ff3b30" stroke-width="7" stroke-linecap="round"/>
+            <path d="M 862 328 L 832 342 L 836 312 Z" fill="#ff3b30"/>
+            <rect x="470" y="292" width="212" height="40" rx="10" fill="#ff3b30"/><text x="576" y="319" text-anchor="middle" font-size="21" font-weight="700" fill="#fff" font-family="Inter, sans-serif">Best month yet</text>
+          </svg>
         </div>
       </div>
     </div>
-    <div class="stage" id="stage">
-      <div class="board" id="board">
-        <img src="/media/app-shot.png" alt="A sample analytics dashboard to draw on" width="1100" height="700">
-        <canvas id="ink" aria-label="Drawing area"></canvas>
-        <div class="hint">Drag to draw an arrow</div>
+  </section>
+
+  <!-- Tools rail -->
+  <section class="wrap" id="features">
+    <div class="section-head">
+      <div>
+        <h2>Point at what matters.</h2>
+        <p>Every tool you need to explain a screenshot, and all of it stays editable until you export.</p>
+      </div>
+      <div class="rail-nav">
+        <button type="button" id="rail-prev" aria-label="Previous tools"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+        <button type="button" id="rail-next" aria-label="More tools"><svg><use href="#i-chev"/></svg></button>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="block sky steps">
-  <svg class="spark" style="right:8%;top:110px;color:var(--white)" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <div class="wrap">
-    <h2>Four steps, one shortcut.</h2>
-    <ol>
-      <li><span class="big" aria-hidden="true">1</span><h3>Capture</h3><p>Press a shortcut and pick an area, a window, the whole screen or a long scrolling page.</p></li>
-      <li><span class="big" aria-hidden="true">2</span><h3>Mark it up</h3><p>Arrows, boxes, numbered steps, text, a magnifier and blur. All of it stays editable.</p></li>
-      <li><span class="big" aria-hidden="true">3</span><h3>Frame it</h3><p>Drop the shot on a coloured background with padding and rounded corners.</p></li>
-      <li><span class="big" aria-hidden="true">4</span><h3>Paste it</h3><p>Copy the image and drop it straight into a chat, a doc or a ticket.</p><kbd>&#8984;</kbd><kbd>V</kbd></li>
-    </ol>
-  </div>
-</section>
-
-<section class="block coral">
-  <div class="wrap">
-    <h2>Everything it does.</h2>
-  </div>
-  <div class="rows" aria-label="Capture an area, a window, the full screen or a scrolling page, copy text from images, add arrows, boxes, numbered steps, text, highlighter, magnifier, blur, spotlight, crop and backgrounds, record the screen or a GIF, trim, pin to screen, copy and paste">
-    <div class="row" aria-hidden="true">
-      <span>Area</span><span>Window</span><span>Full screen</span><span>Scrolling capture</span><span>Text from images</span><span>Arrows</span><span>Boxes</span><span>Numbered steps</span><span>Text</span><span>Highlighter</span>
-      <span>Area</span><span>Window</span><span>Full screen</span><span>Scrolling capture</span><span>Text from images</span><span>Arrows</span><span>Boxes</span><span>Numbered steps</span><span>Text</span><span>Highlighter</span>
+    <div class="rail" id="rail">
+      <article class="tool-card">
+        <header><svg><use href="#i-arrow"/></svg>Arrows and boxes</header>
+        <div class="art" style="background: var(--w-peach)"><div class="frame">
+          <svg viewBox="200 100 720 320" aria-hidden="true"><image href="/media/app-shot.png" width="1100" height="700"/>
+            <rect x="222" y="128" width="290" height="126" rx="10" fill="none" stroke="#ff3b30" stroke-width="7"/>
+            <line x1="700" y1="390" x2="850" y2="340" stroke="#ff3b30" stroke-width="7" stroke-linecap="round"/><path d="M 868 334 L 842 356 L 832 326 Z" fill="#ff3b30"/></svg>
+        </div></div>
+        <p>Draw attention in one drag. Shapes snap clean when you want them to.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-num"/></svg>Numbered steps</header>
+        <div class="art" style="background: var(--w-sun)"><div class="frame">
+          <svg viewBox="0 40 520 340" aria-hidden="true"><image href="/media/app-shot.png" width="1100" height="700"/>
+            <g font-family="Inter, sans-serif" font-weight="800" font-size="20" text-anchor="middle" fill="#fff">
+              <circle cx="186" cy="138" r="18" fill="#ff3b30" stroke="#fff" stroke-width="4"/><text x="186" y="145">1</text>
+              <circle cx="186" cy="176" r="18" fill="#ff3b30" stroke="#fff" stroke-width="4"/><text x="186" y="183">2</text>
+              <circle cx="232" cy="128" r="18" fill="#ff3b30" stroke="#fff" stroke-width="4"/><text x="232" y="135">3</text>
+            </g></svg>
+        </div></div>
+        <p>Walk someone through a flow, one number at a time.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-blur"/></svg>Blur</header>
+        <div class="art" style="background: var(--w-lilac)"><div class="frame">
+          <svg viewBox="232 515 640 165" aria-hidden="true"><image href="/media/app-shot.png" width="1100" height="700"/>
+            <g clip-path="url(#email-cell)"><image href="/media/app-shot.png" width="1100" height="700" filter="url(#soft-blur)"/></g>
+            <rect x="472" y="575" width="250" height="34" rx="6" fill="none" stroke="#8cb8ff" stroke-width="3" stroke-dasharray="8 6"/></svg>
+        </div></div>
+        <p>Hide emails, names and keys before anyone sees them.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-mag"/></svg>Magnifier</header>
+        <div class="art" style="background: var(--w-mint)"><div class="frame">
+          <svg viewBox="300 90 480 280" aria-hidden="true"><image href="/media/app-shot.png" width="1100" height="700"/>
+            <circle cx="416" cy="194" r="24" fill="none" stroke="#ff3b30" stroke-width="4"/>
+            <line x1="438" y1="186" x2="568" y2="182" stroke="#ff3b30" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="640" cy="182" r="76" fill="#fff"/>
+            <g clip-path="url(#loupe)"><image href="/media/app-shot.png" width="1100" height="700" transform="translate(640 182) scale(2.4) translate(-416 -194)"/></g>
+            <circle cx="640" cy="182" r="74" fill="none" stroke="#ff3b30" stroke-width="5"/></svg>
+        </div></div>
+        <p>Zoom into the detail that matters, right on the shot.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-bg"/></svg>Backgrounds</header>
+        <div class="art" style="background: var(--w-sky)">
+          <div style="width:100%;padding:8%;border-radius:14px;background:linear-gradient(135deg,#ff8a7c,#b9a2ff)"><div class="frame"><img src="/media/app-shot.png" alt="" width="1100" height="700"></div></div>
+        </div>
+        <p>Padding, rounded corners and a colour behind it. Ready for a slide.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-crop"/></svg>Crop</header>
+        <div class="art" style="background: var(--w-peach)"><div class="frame">
+          <svg viewBox="0 0 1100 700" aria-hidden="true"><image href="/media/app-shot.png" width="1100" height="700"/>
+            <path d="M0 0H1100V700H0Z M232 260V490H1070V260Z" fill="rgba(21,21,61,0.55)" fill-rule="evenodd"/>
+            <rect x="232" y="260" width="838" height="230" fill="none" stroke="#fff" stroke-width="4"/>
+            <g fill="#fff"><rect x="222" y="250" width="34" height="10"/><rect x="222" y="250" width="10" height="34"/><rect x="1046" y="480" width="34" height="10"/><rect x="1070" y="456" width="10" height="34"/></g></svg>
+        </div></div>
+        <p>Trim to exactly the part that tells the story.</p>
+      </article>
+      <article class="tool-card">
+        <header><svg><use href="#i-text"/></svg>Text from images</header>
+        <div class="art" style="background: var(--w-lilac)">
+          <div class="ocr"><span class="sel">$48,210</span><span class="copied">Text copied</span></div>
+        </div>
+        <p>Grab text out of any screenshot, even from a video call.</p>
+      </article>
     </div>
-    <div class="row rev" aria-hidden="true">
-      <span>Magnifier</span><span>Blur</span><span>Spotlight</span><span>Crop</span><span>Backgrounds</span><span>Screen recording</span><span>GIFs</span><span>Trim</span><span>Pin to screen</span><span>Copy and paste</span>
-      <span>Magnifier</span><span>Blur</span><span>Spotlight</span><span>Crop</span><span>Backgrounds</span><span>Screen recording</span><span>GIFs</span><span>Trim</span><span>Pin to screen</span><span>Copy and paste</span>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section class="block mint closing">
-  <svg class="spark" style="left:12%;top:130px;color:var(--white);width:44px;height:44px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <svg class="spark" style="right:14%;bottom:150px;color:var(--ink);width:26px;height:26px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z"/></svg>
-  <div class="wrap">
-    <h2>Get early access.</h2>
-    <p>Snapper is in a private alpha. Leave your email, and if you are on the list, the download link is yours.</p>
+  <!-- Recording bento -->
+  <section class="wrap" id="recording">
+    <div class="section-head">
+      <div>
+        <h2>When a still won't do, record it.</h2>
+        <p>Record the screen or a GIF, trim the slow bits, and send it while the moment still matters.</p>
+      </div>
+    </div>
+    <div class="bento">
+      <div class="tile dark span-3" style="background: var(--w-night)">
+        <h3>Screen recording</h3>
+        <p>Record the whole screen or just a part of it, right from the menu bar.</p>
+        <div class="art"><span class="rec"><i></i>REC 00:12</span></div>
+      </div>
+      <div class="tile span-3" style="background: var(--w-lilac)">
+        <h3>GIFs in seconds</h3>
+        <p>Short loops for bug reports, docs and chats that play anywhere.</p>
+        <div class="art"><div class="gif">GIF</div></div>
+      </div>
+      <div class="tile wide span-6" style="background: var(--w-peach); min-height: 260px">
+        <h3>Trim before you send</h3>
+        <p>Cut the start and the end in the built-in editor. No other app needed.</p>
+        <div class="art"><div class="strip" aria-hidden="true">
+          <span style="background:#c4d9ff"></span><span style="background:#ffd9c9"></span><span style="background:#bdeed9"></span><span style="background:#d9cdfd"></span><span style="background:#ffe39a"></span><span style="background:#c4d9ff"></span><span style="background:#ffd9c9"></span><span style="background:#bdeed9"></span><span style="background:#d9cdfd"></span><span style="background:#ffe39a"></span>
+          <div class="keep"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Try it -->
+  <section class="wrap" id="try">
+    <div class="try">
+      <div class="copy">
+        <h2>Go on, mark it up.</h2>
+        <p>Draw on the screenshot right here. Same tools, same red as the app.</p>
+        <div class="tools" role="group" aria-label="Drawing tools">
+          <button class="tool" type="button" data-tool="arrow" aria-pressed="true"><svg><use href="#i-arrow"/></svg>Arrow</button>
+          <button class="tool" type="button" data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Box</button>
+          <button class="tool" type="button" data-tool="number" aria-pressed="false"><svg><use href="#i-num"/></svg>Number</button>
+          <button class="tool" type="button" id="undo">Undo</button>
+          <button class="tool" type="button" id="clear">Clear</button>
+        </div>
+        <div class="swatches" role="group" aria-label="Background">
+          <span>Background</span>
+          <button class="swatch" type="button" data-frame="var(--w-peach)" style="background:var(--w-peach)" aria-label="Peach" aria-pressed="true"></button>
+          <button class="swatch" type="button" data-frame="var(--w-sky)" style="background:var(--w-sky)" aria-label="Sky" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-frame="var(--w-mint)" style="background:var(--w-mint)" aria-label="Mint" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-frame="var(--w-lilac)" style="background:var(--w-lilac)" aria-label="Lilac" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-frame="var(--w-night)" style="background:var(--w-night)" aria-label="Night" aria-pressed="false"></button>
+        </div>
+      </div>
+      <div class="board-stage" id="stage">
+        <div class="board" id="board">
+          <img src="/media/app-shot.png" alt="A sample analytics dashboard to draw on" width="1100" height="700">
+          <canvas id="ink" aria-label="Drawing area"></canvas>
+          <div class="hint">Drag to draw an arrow</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mac bento -->
+  <section class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>Feels like part of your Mac.</h2>
+        <p>Small, fast and always within reach, without getting in the way of your work.</p>
+      </div>
+    </div>
+    <div class="bento">
+      <div class="tile span-2" style="background: var(--w-sky)">
+        <h3>Lives in the menu bar</h3>
+        <p>Every capture is one click or one shortcut away.</p>
+        <div class="art"><div class="menubar" aria-hidden="true">
+          <div class="bar"><span>Fri 9:41</span><img src="/icon-192.png" alt=""></div>
+          <ul><li class="on">Capture area</li><li>Capture window</li><li>Record screen</li></ul>
+        </div></div>
+      </div>
+      <div class="tile span-2" style="background: var(--w-mint)">
+        <h3>Pin it to the screen</h3>
+        <p>Keep a reference floating above everything while you work.</p>
+        <div class="art"><div class="pinned" aria-hidden="true"><div class="frame"><img src="/media/app-shot.png" alt="" width="1100" height="700"></div><span class="pin"></span></div></div>
+      </div>
+      <div class="tile span-2" style="background: var(--w-sun)">
+        <h3>Scrolling capture</h3>
+        <p>Grab a whole page, top to bottom, in one shot.</p>
+        <div class="art"><div class="long" aria-hidden="true"><img src="/media/app-shot.png" alt="" width="1100" height="700"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap closing">
+    <img src="/icon-192.png" alt="" width="96" height="96">
+    <h2>Screenshots that make the point.</h2>
+    <p>Snapper is in a private alpha. Leave your email and, if you are on the list, the download link is yours.</p>
     <a class="btn" href="#request">Request access</a>
-  </div>
-</section>
+  </section>
+</main>
 
 <footer>
   <svg class="swimmer" viewBox="0 0 1000 520" aria-hidden="true">
@@ -401,14 +551,31 @@
     <circle cx="842" cy="222" r="34" fill="none" stroke="#fff" stroke-width="17"/>
   </svg>
   <div class="wrap">
-    <span>Snapper by Bykorp</span>
-    <span>Apple Silicon, macOS 14 or later</span>
+    <div class="foot">
+      <div>
+        <a class="brand" href="/"><img src="/icon-192.png" alt="" width="34" height="34">Snapper</a>
+        <p style="margin-top:12px;max-width:22em">Screenshots that make the point. A menu bar app for Mac.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul><li><a href="#features">Features</a></li><li><a href="#recording">Recording</a></li><li><a href="#try">Try it</a></li></ul>
+      </div>
+      <div>
+        <h4>Alpha</h4>
+        <ul><li><a href="#request">Request access</a></li></ul>
+      </div>
+    </div>
+    <div class="legal"><span>Snapper by Bykorp</span><span>Apple Silicon, macOS 14 or later</span></div>
   </div>
 </footer>
 
 <script>
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Hairline under the sticky header once the page scrolls
+  var top = document.getElementById("top");
+  window.addEventListener("scroll", function () { top.classList.toggle("scrolled", window.scrollY > 8); }, { passive: true });
 
   // ---------- Invite form ----------
   var form = document.querySelector(".invite-form");
@@ -469,6 +636,12 @@
     for (var i = 0; i < marks.length; i++) if (t >= marks[i] && t < 29.9) active = i;
     chapterButtons.forEach(function (b, i) { b.classList.toggle("active", i === active); });
   });
+
+  // ---------- Tools rail ----------
+  var rail = document.getElementById("rail");
+  function step() { var card = rail.querySelector(".tool-card"); return card ? card.getBoundingClientRect().width + 20 : 320; }
+  document.getElementById("rail-next").addEventListener("click", function () { rail.scrollBy({ left: step(), behavior: reduce ? "auto" : "smooth" }); });
+  document.getElementById("rail-prev").addEventListener("click", function () { rail.scrollBy({ left: -step(), behavior: reduce ? "auto" : "smooth" }); });
 
   // ---------- Try it ----------
   var stage = document.getElementById("stage");
