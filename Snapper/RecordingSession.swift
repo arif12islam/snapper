@@ -91,7 +91,7 @@ final class RecordingSession {
             }
             guard let error else { return }
             Self.logFailure(error)
-            // The file is written in fragments, so even when finishing fails most of it is usually playable.
+            // If finishing fails, keep whatever part of the file still plays.
             if let fileURL, await Self.isPlayable(fileURL) {
                 Toast.show("Recording saved, but it ended early", on: screen, seconds: 3)
                 await self.finished(url: fileURL, gif: gif, screen: screen)

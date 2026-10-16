@@ -2,7 +2,10 @@ import AVFoundation
 import CoreMedia
 import ScreenCaptureKit
 
-/// Writes video + audio samples to a fragmented MP4 (so a crash leaves a playable file).
+/// Writes video + audio samples to an MP4.
+///
+/// Not fragmented: on current macOS, writing the second movie fragment fails (AVFoundation -11800 / -16341),
+/// which cut every recording to its first fragment. A plain MP4 is written in one go when recording stops.
 /// Every method that touches state runs on `queue`; the capture sources deliver on that same queue.
 final class RecordingWriter: @unchecked Sendable {
     let queue = DispatchQueue(label: "com.example.snapper.recording-writer")
@@ -29,7 +32,6 @@ final class RecordingWriter: @unchecked Sendable {
         self.frameDuration = CMTime(value: 1, timescale: CMTimeScale(fps))
         try? FileManager.default.removeItem(at: url)
         writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
-        writer.movieFragmentInterval = CMTime(seconds: 5, preferredTimescale: 600)
         writer.shouldOptimizeForNetworkUse = false
 
         let pixels = Double(width * height) * Double(fps) / 30.0
