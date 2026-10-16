@@ -28,6 +28,16 @@ final class HistoryStore: ObservableObject {
         case all = "All", screenshots = "Screenshots", windows = "Windows", scrolling = "Scrolling", recordings = "Recordings"
         var id: String { rawValue }
 
+        var symbol: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .screenshots: return "camera.viewfinder"
+            case .windows: return "macwindow"
+            case .scrolling: return "scroll"
+            case .recordings: return "record.circle"
+            }
+        }
+
         func matches(_ e: Entry) -> Bool {
             switch self {
             case .all: return true

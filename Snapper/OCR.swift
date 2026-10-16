@@ -66,11 +66,11 @@ enum OCR {
 
     // MARK: Text
 
-    /// One recognition attempt per strategy, stopping at the first that works. The default path runs on the
-    /// Neural Engine; when that cannot start (CRImageReaderError, "could not create inference context") the
-    /// same request runs on the CPU, and as a last resort in fast mode.
+    /// Runs on the CPU from the start. On this setup the Neural Engine path fails slowly (CRImageReaderError)
+    /// before anything else is tried, while the CPU path is instant once its model is loaded, which warmUp()
+    /// does at launch. Fast mode on the CPU is the last resort.
     private static func read(_ image: CGImage, languages: [String], detect: Bool) -> (lines: [String], error: String?) {
-        let attempts: [(level: VNRequestTextRecognitionLevel, cpu: Bool)] = [(.accurate, false), (.accurate, true), (.fast, true)]
+        let attempts: [(level: VNRequestTextRecognitionLevel, cpu: Bool)] = [(.accurate, true), (.fast, true)]
         var lastError: String?
         for attempt in attempts {
             let started = Date()

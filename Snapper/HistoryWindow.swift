@@ -47,11 +47,13 @@ private struct HistoryView: View {
         VStack(spacing: 0) {
             HStack {
                 Picker("", selection: $ui.filter) {
-                    ForEach(HistoryStore.Filter.allCases) { f in Text(f.rawValue).tag(f) }
+                    ForEach(HistoryStore.Filter.allCases) { f in
+                        Label(f.rawValue, systemImage: f.symbol).labelStyle(.iconOnly).help(f.rawValue).tag(f)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(maxWidth: 460)
+                .frame(maxWidth: 260)
                 Spacer()
                 Text("Kept for \(Int(AppSettings.retentionDays)) days")
                     .font(.caption)

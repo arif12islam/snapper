@@ -26,7 +26,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     private enum StyleControl: CaseIterable { case color, stroke, fill, arrow, bubble, text, size, blur, spotlight, angle, crop, shapeKind, smart, zoom }
 
-    private static let cropAspects: [(String, CGFloat?)] = [
+    static let cropAspects: [(String, CGFloat?)] = [
         ("Free", nil), ("Original", -1), ("1:1", 1), ("4:3", 4.0 / 3.0), ("3:2", 1.5),
         ("16:9", 16.0 / 9.0), ("9:16", 9.0 / 16.0), ("4:5", 0.8)
     ]
@@ -45,14 +45,18 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private let shapeStyleSeg = NSSegmentedControl()
     private let smartCheck = NSButton(checkboxWithTitle: "Smart shapes", target: nil, action: nil)
     private let magSlider = NSSlider(value: 2.5, minValue: 1.5, maxValue: 4, target: nil, action: nil)
-    private let textPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let textPopup = ImageSegments(images: (0..<AnnotationStyle.textStyleNames.count).map { ChoiceArt.textStyle($0) },
+                                          tips: AnnotationStyle.textStyleNames)
     private let bubbleSeg = NSSegmentedControl(images: [
         NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "Bubble") ?? NSImage(),
         NSImage(systemSymbolName: "textformat", accessibilityDescription: "Plain") ?? NSImage()],
         trackingMode: .selectOne, target: nil, action: nil)
-    private let blurPopup = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let spotlightPopup = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let cropPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let blurPopup = ImageSegments(images: [ChoiceArt.blurMode(0), ChoiceArt.blurMode(1)],
+                                          tips: ["Smooth blur", "Secure: blurs a scrambled copy, so nothing can be recovered"])
+    private let spotlightPopup = ImageSegments(images: [ChoiceArt.spotlight(0), ChoiceArt.spotlight(1)],
+                                               tips: AnnotationStyle.spotlightShapeNames)
+    private let cropPopup = ImageSegments(images: AnnotateWindowController.cropAspects.map { ChoiceArt.crop($0.1) },
+                                          tips: AnnotateWindowController.cropAspects.map { $0.0 })
     private let fillCheck = NSButton(checkboxWithTitle: "Fill", target: nil, action: nil)
     private let angleSlider = NSSlider(value: 0, minValue: -180, maxValue: 180, target: nil, action: nil)
     private let hintLabel = NSTextField(labelWithString: "")
@@ -253,13 +257,9 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         }
     }
 
-    private func smallPopup(_ popup: NSPopUpButton, items: [String]) {
-        popup.removeAllItems()
-        popup.addItems(withTitles: items)
-        popup.target = self
-        popup.action = #selector(styleChanged)
-        popup.controlSize = .small
-        popup.font = .systemFont(ofSize: 11)
+    private func smallPopup(_ seg: ImageSegments) {
+        seg.target = self
+        seg.action = #selector(styleChanged)
     }
 
     // MARK: - Build
@@ -439,16 +439,11 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         magSlider.action = #selector(styleChanged)
         magSlider.controlSize = .small
         magSlider.widthAnchor.constraint(equalToConstant: 90).isActive = true
-        smallPopup(textPopup, items: AnnotationStyle.textStyleNames)
-        smallPopup(blurPopup, items: AnnotationStyle.blurModeNames)
-        smallPopup(spotlightPopup, items: AnnotationStyle.spotlightShapeNames)
-        blurPopup.toolTip = "Secure blurs a scrambled copy, so nothing can be recovered"
-        cropPopup.removeAllItems()
-        cropPopup.addItems(withTitles: Self.cropAspects.map { $0.0 })
+        smallPopup(textPopup)
+        smallPopup(blurPopup)
+        smallPopup(spotlightPopup)
         cropPopup.target = self
         cropPopup.action = #selector(cropAspectChanged)
-        cropPopup.controlSize = .small
-        cropPopup.font = .systemFont(ofSize: 11)
 
         fillCheck.target = self
         fillCheck.action = #selector(styleChanged)

@@ -115,12 +115,12 @@ private struct GeneralSettings: View {
                     .font(.caption).foregroundColor(.secondary)
             }
             Section("History") {
-                Picker("Keep captures for", selection: $retentionDays) {
-                    Text("1 day").tag(1.0)
-                    Text("3 days").tag(3.0)
-                    Text("1 week").tag(7.0)
-                    Text("1 month").tag(30.0)
-                }
+                TilePicker(title: "Keep captures for", selection: $retentionDays, choices: [
+                    Choice(1.0, "1 day") { DaysArt(days: 1) },
+                    Choice(3.0, "3 days") { DaysArt(days: 3) },
+                    Choice(7.0, "1 week") { DaysArt(days: 7) },
+                    Choice(30.0, "1 month") { DaysArt(days: 30) }
+                ])
                 Button("Open History…") { Task { @MainActor in HistoryWindowController.show() } }
             }
         }
@@ -158,27 +158,26 @@ private struct CaptureSettings: View {
                 Toggle("Freeze the screen while selecting", isOn: $freezeScreen)
                 Text("Turn freezing off to capture menus, videos and other moving content as they are when you release.")
                     .font(.caption).foregroundColor(.secondary)
-                Picker("Self-timer", selection: $selfTimerSeconds) {
-                    Text("3 seconds").tag(3)
-                    Text("5 seconds").tag(5)
-                    Text("10 seconds").tag(10)
-                }
+                TilePicker(title: "Self-timer", selection: $selfTimerSeconds, choices: [3, 5, 10].map { n in
+                    Choice(n, "\(n) s") { TimerArt(seconds: n) }
+                })
             }
             Section("Window capture") {
-                Picker("Style", selection: $windowCaptureStyle) {
-                    Text("With background").tag(0)
-                    Text("Transparent with shadow").tag(1)
-                    Text("Transparent without shadow").tag(2)
-                }
+                TilePicker(title: "Style", selection: $windowCaptureStyle, choices: [
+                    Choice(0, "Background") { WindowStyleArt(style: 0) },
+                    Choice(1, "Shadow") { WindowStyleArt(style: 1) },
+                    Choice(2, "Flat") { WindowStyleArt(style: 2) }
+                ], tile: CGSize(width: 70, height: 48))
                 if windowCaptureStyle == 0 {
-                    Picker("Background", selection: Binding(get: { fillTag }, set: { setFill($0) })) {
-                        Text("Desktop wallpaper").tag(-1)
-                        Text("Plain white").tag(-2)
-                        Text("Plain black").tag(-3)
-                        ForEach(0..<BackgroundCatalog.builtIn.count, id: \.self) { i in
-                            Text(BackgroundCatalog.builtIn[i].name).tag(i)
-                        }
-                    }
+                    TilePicker(title: "Background", selection: Binding(get: { fillTag }, set: { setFill($0) }),
+                               choices: [
+                                   Choice(-1, "Wallpaper") { swatch(.wallpaper) },
+                                   Choice(-2, "White") { swatch(.color("#FFFFFF")) },
+                                   Choice(-3, "Black") { swatch(.color("#000000")) }
+                               ] + (0..<BackgroundCatalog.builtIn.count).map { i in
+                                   Choice(i, BackgroundCatalog.builtIn[i].name) { swatch(.builtIn(i)) }
+                               },
+                               tile: CGSize(width: 52, height: 36), columns: 6)
                     HStack {
                         Text("Padding")
                         Slider(value: Binding(get: { Double(windowBackground.padding) },
@@ -191,6 +190,12 @@ private struct CaptureSettings: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func swatch(_ fill: BackgroundSettings.Fill) -> some View {
+        Image(nsImage: BackgroundMaker.thumbnail(fill, size: CGSize(width: 40, height: 28)))
+            .resizable()
+            .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     private var fillTag: Int {
@@ -227,17 +232,17 @@ private struct QuickAccessSettings: View {
     var body: some View {
         Form {
             Section("Overlay") {
-                Picker("Position", selection: $qaPosition) {
-                    Text("Bottom right").tag(0)
-                    Text("Bottom left").tag(1)
-                    Text("Top right").tag(2)
-                    Text("Top left").tag(3)
-                }
-                Picker("Size", selection: $qaSize) {
-                    Text("Small").tag(0)
-                    Text("Medium").tag(1)
-                    Text("Large").tag(2)
-                }
+                TilePicker(title: "Position", selection: $qaPosition, choices: [
+                    Choice(0, "Bottom right") { ScreenArt(at: .bottomTrailing) },
+                    Choice(1, "Bottom left") { ScreenArt(at: .bottomLeading) },
+                    Choice(2, "Top right") { ScreenArt(at: .topTrailing) },
+                    Choice(3, "Top left") { ScreenArt(at: .topLeading) }
+                ])
+                TilePicker(title: "Size", selection: $qaSize, choices: [
+                    Choice(0, "Small") { ScreenArt(block: CGSize(width: 8, height: 6)) },
+                    Choice(1, "Medium") { ScreenArt(block: CGSize(width: 13, height: 9)) },
+                    Choice(2, "Large") { ScreenArt(block: CGSize(width: 19, height: 13)) }
+                ])
                 Text("The overlay appears on the display you captured. Swipe it towards the edge to dismiss, away from the edge to save.")
                     .font(.caption).foregroundColor(.secondary)
             }
@@ -285,21 +290,21 @@ private struct RecordingSettings: View {
     var body: some View {
         Form {
             Section("Video") {
-                Picker("Quality", selection: $recordQuality) {
-                    Text("Low (small files)").tag(0)
-                    Text("Medium").tag(1)
-                    Text("High").tag(2)
-                }
-                Picker("Frame rate", selection: $recordFPS) {
-                    Text("15 fps").tag(15)
-                    Text("30 fps").tag(30)
-                    Text("60 fps").tag(60)
-                }
-                Picker("Resolution", selection: $recordResolution) {
-                    Text("Native (Retina)").tag(0)
-                    Text("Up to 1080p").tag(1)
-                    Text("Up to 720p").tag(2)
-                }
+                TilePicker(title: "Quality", selection: $recordQuality, choices: [
+                    Choice(0, "Small files") { BarsArt(n: 1) },
+                    Choice(1, "Medium") { BarsArt(n: 2) },
+                    Choice(2, "High") { BarsArt(n: 3) }
+                ], tile: CGSize(width: 62, height: 40))
+                TilePicker(title: "Frame rate", selection: $recordFPS, choices: [
+                    Choice(15, "15 fps") { FramesArt(count: 3) },
+                    Choice(30, "30 fps") { FramesArt(count: 5) },
+                    Choice(60, "60 fps") { FramesArt(count: 9) }
+                ], tile: CGSize(width: 62, height: 40))
+                TilePicker(title: "Resolution", selection: $recordResolution, choices: [
+                    Choice(0, "Retina") { ScreenArt(at: .center, block: CGSize(width: 30, height: 20)) },
+                    Choice(1, "1080p") { ScreenArt(at: .center, block: CGSize(width: 20, height: 13)) },
+                    Choice(2, "720p") { ScreenArt(at: .center, block: CGSize(width: 12, height: 8)) }
+                ], tile: CGSize(width: 62, height: 40))
                 Stepper(value: $countdownSeconds, in: 0...10) { Text("Countdown: \(countdownSeconds) s") }
             }
             Section("Audio") {
@@ -325,49 +330,49 @@ private struct RecordingSettings: View {
                 ColorPicker("Color", selection: Binding(get: { Color(nsColor: NSColor(hex: clickColor) ?? .systemYellow) },
                                                         set: { clickColor = NSColor($0).hexString }), supportsOpacity: false)
                 HStack { Text("Size"); Slider(value: $clickSize, in: 32...120) }
-                Picker("Style", selection: $clickStyle) {
-                    Text("Outline").tag(0)
-                    Text("Filled").tag(1)
-                }
+                TilePicker(title: "Style", selection: $clickStyle, choices: [
+                    Choice(0, "Outline") { ClickArt(filled: false) },
+                    Choice(1, "Filled") { ClickArt(filled: true) }
+                ])
                 Toggle("Animate", isOn: $clickAnimate)
             }
             .disabled(!showClicks)
             Section("Keystrokes") {
                 Toggle("Show keystrokes (asks for Input Monitoring)", isOn: $showKeystrokes)
-                Picker("Position", selection: $keysPosition) {
-                    Text("Bottom centre").tag(0)
-                    Text("Bottom left").tag(1)
-                    Text("Bottom right").tag(2)
-                    Text("Top centre").tag(3)
-                }
-                Picker("Size", selection: $keysSize) {
-                    Text("Small").tag(0)
-                    Text("Medium").tag(1)
-                    Text("Large").tag(2)
-                }
-                Picker("Style", selection: $keysStyle) {
-                    Text("Dark").tag(0)
-                    Text("Light").tag(1)
-                }
+                TilePicker(title: "Position", selection: $keysPosition, choices: [
+                    Choice(0, "Bottom") { ScreenArt(at: .bottom, block: CGSize(width: 16, height: 5)) },
+                    Choice(1, "Bottom left") { ScreenArt(at: .bottomLeading, block: CGSize(width: 16, height: 5)) },
+                    Choice(2, "Bottom right") { ScreenArt(at: .bottomTrailing, block: CGSize(width: 16, height: 5)) },
+                    Choice(3, "Top") { ScreenArt(at: .top, block: CGSize(width: 16, height: 5)) }
+                ])
+                TilePicker(title: "Size", selection: $keysSize, choices: [
+                    Choice(0, "Small") { KeycapArt(scale: 0.8) },
+                    Choice(1, "Medium") { KeycapArt(scale: 1.05) },
+                    Choice(2, "Large") { KeycapArt(scale: 1.35) }
+                ])
+                TilePicker(title: "Style", selection: $keysStyle, choices: [
+                    Choice(0, "Dark") { KeycapArt(scale: 1.1, dark: true) },
+                    Choice(1, "Light") { KeycapArt(scale: 1.1, dark: false) }
+                ])
                 Toggle("Only keyboard shortcuts (⌘, ⌥, ⌃ combinations)", isOn: $keysOnlyShortcuts)
             }
             Section("Camera") {
                 Toggle("Show camera", isOn: $showCamera)
-                Picker("Position", selection: $cameraPosition) {
-                    Text("Bottom left").tag(0)
-                    Text("Bottom right").tag(1)
-                    Text("Top left").tag(2)
-                    Text("Top right").tag(3)
-                }
-                Picker("Size", selection: $cameraSize) {
-                    Text("Small").tag(0)
-                    Text("Medium").tag(1)
-                    Text("Large").tag(2)
-                }
-                Picker("Shape", selection: $cameraShape) {
-                    Text("Circle").tag(0)
-                    Text("Rounded rectangle").tag(1)
-                }
+                TilePicker(title: "Position", selection: $cameraPosition, choices: [
+                    Choice(0, "Bottom left") { ScreenArt(at: .bottomLeading, block: CGSize(width: 10, height: 10), round: cameraShape == 0) },
+                    Choice(1, "Bottom right") { ScreenArt(at: .bottomTrailing, block: CGSize(width: 10, height: 10), round: cameraShape == 0) },
+                    Choice(2, "Top left") { ScreenArt(at: .topLeading, block: CGSize(width: 10, height: 10), round: cameraShape == 0) },
+                    Choice(3, "Top right") { ScreenArt(at: .topTrailing, block: CGSize(width: 10, height: 10), round: cameraShape == 0) }
+                ])
+                TilePicker(title: "Size", selection: $cameraSize, choices: [
+                    Choice(0, "Small") { ScreenArt(block: CGSize(width: 7, height: 7), round: cameraShape == 0) },
+                    Choice(1, "Medium") { ScreenArt(block: CGSize(width: 11, height: 11), round: cameraShape == 0) },
+                    Choice(2, "Large") { ScreenArt(block: CGSize(width: 16, height: 16), round: cameraShape == 0) }
+                ])
+                TilePicker(title: "Shape", selection: $cameraShape, choices: [
+                    Choice(0, "Circle") { Circle().frame(width: 22, height: 22) },
+                    Choice(1, "Rounded") { RoundedRectangle(cornerRadius: 6).frame(width: 28, height: 22) }
+                ])
                 Text("Drag the camera to move it. Double-click for fullscreen camera.")
                     .font(.caption).foregroundColor(.secondary)
             }
@@ -390,13 +395,13 @@ private struct CloudSettings: View {
                     .font(.caption).foregroundColor(.secondary)
             }
             Section("Links") {
-                Picker("Links expire", selection: $uploadExpiryHours) {
-                    Text("Never").tag(0)
-                    Text("After 1 hour").tag(1)
-                    Text("After 1 day").tag(24)
-                    Text("After 1 week").tag(168)
-                    Text("After 30 days").tag(720)
-                }
+                TilePicker(title: "Links expire", selection: $uploadExpiryHours, choices: [
+                    Choice(0, "Never") { SymbolArt(name: "infinity") },
+                    Choice(1, "1 hour") { SymbolArt(name: "clock") },
+                    Choice(24, "1 day") { DaysArt(days: 1) },
+                    Choice(168, "1 week") { DaysArt(days: 7) },
+                    Choice(720, "30 days") { DaysArt(days: 30) }
+                ], tile: CGSize(width: 52, height: 38))
                 Text("⌥-click Upload to set a password, a different expiry, or delete-after-first-view for one upload.")
                     .font(.caption).foregroundColor(.secondary)
             }

@@ -128,13 +128,12 @@ struct BackgroundPanelView: View {
                     alignmentGrid
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Picker("Aspect ratio", selection: Binding(get: { model.settings.aspect },
-                                                              set: { model.settings.aspect = $0 })) {
-                        ForEach(BackgroundSettings.Aspect.allCases, id: \.self) { a in
-                            Text(a.rawValue).tag(a)
-                        }
-                    }
-                    .frame(width: 170)
+                    Text("Aspect ratio").font(.callout).foregroundColor(.secondary)
+                    TilePicker(selection: Binding(get: { model.settings.aspect }, set: { model.settings.aspect = $0 }),
+                               choices: BackgroundSettings.Aspect.allCases.map { a in
+                                   Choice(a, a.rawValue) { AspectArt(ratio: a.ratio) }
+                               },
+                               tile: CGSize(width: 34, height: 28), columns: 4)
                     Toggle("Auto Balance", isOn: Binding(get: { model.settings.autoBalance },
                                                          set: { model.settings.autoBalance = $0 }))
                         .help("Trims plain margins around the content so the padding looks even")

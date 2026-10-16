@@ -551,10 +551,13 @@ private struct VideoEditSidebar: View {
                 }
 
                 section("Format") {
-                    Picker("", selection: Binding(get: { model.settings.format }, set: { model.settings.format = $0 })) {
-                        ForEach(VideoEditSettings.Format.allCases, id: \.self) { f in Text(f.rawValue).tag(f) }
-                    }
-                    .labelsHidden()
+                    TilePicker(selection: Binding(get: { model.settings.format }, set: { model.settings.format = $0 }),
+                               choices: VideoEditSettings.Format.allCases.map { f in
+                                   Choice(f, f == .original ? "Original" : (f.rawValue.split(separator: " ").last.map(String.init) ?? f.rawValue)) {
+                                       AspectArt(ratio: f.aspect.ratio)
+                                   }
+                               },
+                               tile: CGSize(width: 42, height: 34))
                     Text("For TikTok, Reels and Shorts use Vertical; YouTube uses Landscape.")
                         .font(.caption).foregroundColor(.secondary)
                 }
@@ -619,23 +622,29 @@ private struct VideoEditSidebar: View {
             timeRow("Start", model.trimStart)
             timeRow("End", model.trimEnd)
             timeRow("Length", max(0, model.trimEnd - model.trimStart))
-            Menu {
-                Button("MP4\u{2026}") { model.onExportMP4?() }
-                Button("GIF\u{2026}") { model.onExportGIF?() }
-            } label: {
-                Text("Export")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.106, green: 0.106, blue: 0.302)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.12)))
-                    .contentShape(Rectangle())
+            HStack(spacing: 8) {
+                exportTile("MP4", symbol: "film") { model.onExportMP4?() }
+                exportTile("GIF", symbol: "sparkles") { model.onExportGIF?() }
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
             .padding(.top, 6)
         }
+    }
+
+    private func exportTile(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: symbol).font(.system(size: 14, weight: .semibold))
+                Text(title).font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.106, green: 0.106, blue: 0.302)))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.12)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Export as \(title)")
     }
 
     private func timeRow(_ title: String, _ seconds: Double) -> some View {
