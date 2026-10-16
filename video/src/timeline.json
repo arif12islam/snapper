@@ -135,43 +135,155 @@
   "voice": [
     {
       "at": [
-        240,
-        26
+        0,
+        12
       ],
-      "until": 80,
+      "until": 104,
+      "text": "You send a screenshot. They send back questions."
+    },
+    {
+      "at": [
+        0,
+        122
+      ],
+      "until": 214,
+      "text": "Time to get to the point."
+    },
+    {
+      "at": [
+        240,
+        22
+      ],
+      "until": 70,
       "text": "Meet Snapper."
     },
     {
       "at": [
+        240,
+        74
+      ],
+      "until": 172,
+      "text": "It lives in your menu bar. Pointing is its thing."
+    },
+    {
+      "at": [
         420,
-        46
+        -8
+      ],
+      "until": 28,
+      "text": "One shortcut."
+    },
+    {
+      "at": [
+        420,
+        48
       ],
       "until": 96,
-      "text": "Capture anything."
+      "text": "Snap."
     },
     {
       "at": [
         420,
         100
       ],
-      "until": 160,
-      "text": "Mark it up."
+      "until": 146,
+      "text": "Box the number."
     },
     {
       "at": [
         420,
-        341
+        147
       ],
-      "until": 400,
-      "text": "Frame it."
+      "until": 214,
+      "text": "Point at the proof."
     },
     {
       "at": [
         420,
-        416
+        212
+      ],
+      "until": 269,
+      "text": "Hide what's nobody's business."
+    },
+    {
+      "at": [
+        420,
+        270
+      ],
+      "until": 338,
+      "text": "Zoom in, so nobody squints."
+    },
+    {
+      "at": [
+        420,
+        343
+      ],
+      "until": 414,
+      "text": "Dress it up a little."
+    },
+    {
+      "at": [
+        420,
+        418
       ],
       "until": 478,
-      "text": "Share it."
+      "text": "Copy. Done."
+    },
+    {
+      "at": [
+        900,
+        44
+      ],
+      "until": 86,
+      "text": "Paste it anywhere."
+    },
+    {
+      "at": [
+        900,
+        92
+      ],
+      "until": 165,
+      "text": "No follow-up questions. Imagine that."
+    },
+    {
+      "at": [
+        1050,
+        2
+      ],
+      "until": 32,
+      "text": "Need it moving?"
+    },
+    {
+      "at": [
+        1050,
+        33
+      ],
+      "until": 54,
+      "text": "Record."
+    },
+    {
+      "at": [
+        1050,
+        54
+      ],
+      "until": 75,
+      "text": "Trim."
+    },
+    {
+      "at": [
+        1050,
+        75
+      ],
+      "until": 112,
+      "text": "Send."
+    },
+    {
+      "at": [
+        1170,
+        80
+      ],
+      "until": 112,
+      "text": "Snapper."
     },
     {
       "at": [

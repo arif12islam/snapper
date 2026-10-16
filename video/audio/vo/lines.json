@@ -3,51 +3,177 @@
   "lines": [
     {
       "n": 0,
-      "start": 8.867,
-      "slot": 1.8,
+      "start": 0.4,
+      "slot": 3.07,
+      "dur": 2.71,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "You send a screenshot. They send back questions."
+    },
+    {
+      "n": 1,
+      "start": 4.067,
+      "slot": 3.07,
+      "dur": 1.32,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Time to get to the point."
+    },
+    {
+      "n": 2,
+      "start": 8.733,
+      "slot": 1.6,
       "dur": 0.9,
       "speed": 1.0,
       "sr": 24000,
       "text": "Meet Snapper."
     },
     {
-      "n": 1,
-      "start": 15.533,
-      "slot": 1.67,
-      "dur": 0.99,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Capture anything."
-    },
-    {
-      "n": 2,
-      "start": 17.333,
-      "slot": 2.0,
-      "dur": 0.77,
-      "speed": 1.0,
-      "sr": 24000,
-      "text": "Mark it up."
-    },
-    {
       "n": 3,
-      "start": 25.367,
-      "slot": 1.97,
-      "dur": 0.68,
+      "start": 10.467,
+      "slot": 3.27,
+      "dur": 2.73,
       "speed": 1.0,
       "sr": 24000,
-      "text": "Frame it."
+      "text": "It lives in your menu bar. Pointing is its thing."
     },
     {
       "n": 4,
-      "start": 27.867,
-      "slot": 2.07,
-      "dur": 0.6,
+      "start": 13.733,
+      "slot": 1.2,
+      "dur": 0.99,
       "speed": 1.0,
       "sr": 24000,
-      "text": "Share it."
+      "text": "One shortcut."
     },
     {
       "n": 5,
+      "start": 15.6,
+      "slot": 1.6,
+      "dur": 0.59,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Snap."
+    },
+    {
+      "n": 6,
+      "start": 17.333,
+      "slot": 1.53,
+      "dur": 0.94,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Box the number."
+    },
+    {
+      "n": 7,
+      "start": 18.9,
+      "slot": 2.23,
+      "dur": 0.98,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Point at the proof."
+    },
+    {
+      "n": 8,
+      "start": 21.067,
+      "slot": 1.9,
+      "dur": 1.66,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Hide what's nobody's business."
+    },
+    {
+      "n": 9,
+      "start": 23.0,
+      "slot": 2.27,
+      "dur": 1.79,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Zoom in, so nobody squints."
+    },
+    {
+      "n": 10,
+      "start": 25.433,
+      "slot": 2.37,
+      "dur": 1.1,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Dress it up a little."
+    },
+    {
+      "n": 11,
+      "start": 27.933,
+      "slot": 2.0,
+      "dur": 1.0,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Copy. Done."
+    },
+    {
+      "n": 12,
+      "start": 31.467,
+      "slot": 1.4,
+      "dur": 0.97,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Paste it anywhere."
+    },
+    {
+      "n": 13,
+      "start": 33.067,
+      "slot": 2.43,
+      "dur": 2.42,
+      "speed": 1.05,
+      "sr": 24000,
+      "text": "No follow-up questions. Imagine that."
+    },
+    {
+      "n": 14,
+      "start": 35.067,
+      "slot": 1.0,
+      "dur": 0.88,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Need it moving?"
+    },
+    {
+      "n": 15,
+      "start": 36.1,
+      "slot": 0.7,
+      "dur": 0.66,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Record."
+    },
+    {
+      "n": 16,
+      "start": 36.8,
+      "slot": 0.7,
+      "dur": 0.57,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Trim."
+    },
+    {
+      "n": 17,
+      "start": 37.5,
+      "slot": 1.23,
+      "dur": 0.57,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Send."
+    },
+    {
+      "n": 18,
+      "start": 41.667,
+      "slot": 1.07,
+      "dur": 0.67,
+      "speed": 1.0,
+      "sr": 24000,
+      "text": "Snapper."
+    },
+    {
+      "n": 19,
       "start": 42.8,
       "slot": 2.87,
       "dur": 1.63,

@@ -178,7 +178,7 @@ const CHIPS = [
   { label: 'Magnify', icon: 'magnifier', c: C.sun, a: 318 },
   { label: 'Blur', icon: 'blur', c: C.lilac, a: 25 },
   { label: 'Record', icon: 'spotlight', c: C.mint, a: 92 },
-  { label: 'Share', icon: 'link', c: C.cream, a: 155 },
+  { label: 'Copy', icon: 'check', c: C.cream, a: 155 },
 ];
 
 export const Intro: React.FC = () => {
@@ -299,17 +299,13 @@ export const Chat: React.FC = () => {
               </Message>
               <Message f={f} start={M[1]} top={118} who="You" bg={C.ink} initials="A" time="9:42">
                 <div>Here you go</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2f5bd3', fontWeight: 600, marginTop: 2 }}>
-                  <Icon name="link" size={18} color="#2f5bd3" />
-                  snapper.link/k7Qm
-                </div>
                 <div style={{ marginTop: 10, width: 1100 * SHOT, height: 700 * SHOT, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(27,27,77,0.12)', position: 'relative' }}>
                   <div style={{ transform: `scale(${SHOT})`, transformOrigin: '0 0' }}>
                     <FinalShot />
                   </div>
                 </div>
               </Message>
-              <Message f={f} start={M[2]} top={600} who="Maya" bg={C.coral} initials="M" time="9:42">
+              <Message f={f} start={M[2]} top={566} who="Maya" bg={C.coral} initials="M" time="9:42">
                 October. Clear as day, thanks.
               </Message>
             </div>

@@ -563,12 +563,9 @@ export const ProductScene: React.FC = () => {
                 <div style={{ width: 28, height: 28, borderRadius: 14, background: '#34c759', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon name="check" size={18} color="#fff" width={2.6} />
                 </div>
-                Copied. Link ready
+                Copied to clipboard
                 <div style={{ flex: 1 }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>
-                  <Icon name="link" size={16} color="rgba(255,255,255,0.7)" />
-                  snapper.link/k7Qm
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>Paste anywhere</div>
               </div>
             ) : null}
           </div>
@@ -596,7 +593,7 @@ export const ProductScene: React.FC = () => {
       <ChapterTag f={f} fps={fps} n={1} label="Capture any area" start={4} end={T.rectStart - 18} />
       <ChapterTag f={f} fps={fps} n={2} label="Mark it up" start={T.rectStart - 6} end={T.bgClick - 16} />
       <ChapterTag f={f} fps={fps} n={3} label="Frame it" start={T.bgClick - 4} end={T.copyClick - 16} />
-      <ChapterTag f={f} fps={fps} n={4} label="Share a link" start={T.copyClick - 4} end={T.outStart - 4} />
+      <ChapterTag f={f} fps={fps} n={4} label="Paste anywhere" start={T.copyClick - 4} end={T.outStart - 4} />
       {/* Fade in from the navy intro */}
       <AbsoluteFill style={{ background: NAVY, opacity: interpolate(f, [0, 10], [1, 0], clamp) }} />
     </AbsoluteFill>

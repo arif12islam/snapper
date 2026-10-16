@@ -427,7 +427,7 @@ if WITH_VOICE and os.path.exists(meta_path):
     vo = vo + 0.25 * bp(vo, 2500, 5000)
     speech = np.abs(vo) > 0.01
     vo_rms = np.sqrt(np.mean(vo[speech] ** 2)) if speech.any() else 1.0
-    vo *= 10 ** (-16.5 / 20) / vo_rms
+    vo *= 10 ** (-15.5 / 20) / vo_rms
     vo = np.tanh(vo * 1.6) / 1.6  # gentle limiter on peaks
     print(f"voice: {meta['voice']}, {len(meta['lines'])} lines")
 
@@ -439,7 +439,7 @@ env_ = np.convolve(active, np.ones(k) / k, mode='same')
 from scipy.ndimage import maximum_filter1d
 env_ = maximum_filter1d(env_, size=int(0.35 * SR))
 env_ = lp(np.clip(env_ * 3, 0, 1), 6, 1)
-duck_music = 1 - 0.5 * env_
+duck_music = 1 - 0.55 * env_
 duck_sfx = 1 - 0.2 * env_
 
 bed_l = music_l * duck_music + sfx.l * 1.15 * duck_sfx
