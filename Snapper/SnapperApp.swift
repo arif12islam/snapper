@@ -135,6 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         installMenus()
         installStatusItem()
+        OCR.warmUp()
 
         // Menus show the current shortcuts: rebuild them whenever a shortcut changes.
         HotkeyStore.shared.$combos

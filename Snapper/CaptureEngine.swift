@@ -197,6 +197,7 @@ final class CaptureCoordinator {
 
     private func recognizeText(in result: CaptureResult) {
         Task {
+            Toast.show("Reading text…", on: result.screen, seconds: 10)
             let output = await OCR.analyze(result.image)
             let combined = ([output.text] + output.codes).filter { !$0.isEmpty }.joined(separator: "\n")
             if combined.isEmpty {

@@ -603,6 +603,7 @@ final class QuickAccessPanel: NSObject {
         cancelAutoClose()
         let target = item.screen
         Task {
+            Toast.show("Reading text…", on: target, seconds: 10)
             let output = await OCR.analyze(r.image)
             if !output.text.isEmpty || !output.codes.isEmpty {
                 let combined = ([output.text] + output.codes).filter { !$0.isEmpty }.joined(separator: "\n")
