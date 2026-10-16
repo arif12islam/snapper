@@ -247,7 +247,6 @@ final class ImageSegments: NSSegmentedControl {
         selectedSegment = 0
     }
 
-    var indexOfSelectedItem: Int { selectedSegment }
     func selectItem(at index: Int) { if index >= 0, index < segmentCount { selectedSegment = index } }
 }
 
