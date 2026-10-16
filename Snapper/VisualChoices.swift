@@ -233,11 +233,11 @@ struct SymbolArt: View {
 
 /// A segmented control of pictures that reads like a popup button (indexOfSelectedItem, selectItem(at:)).
 final class ImageSegments: NSSegmentedControl {
-    convenience init(images: [NSImage], tips: [String], width: CGFloat = 40) {
+    convenience init(images: [NSImage], tips: [String], width: CGFloat = 30) {
         self.init(frame: .zero)
         segmentCount = images.count
         trackingMode = .selectOne
-        controlSize = .large
+        controlSize = .small
         selectedSegmentBezelColor = Brand.accent
         for (i, image) in images.enumerated() {
             setImage(image, forSegment: i)

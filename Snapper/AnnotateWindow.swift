@@ -79,8 +79,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     private weak var bottomRedo: NSButton?
     private let deleteButton = NSButton()
     private let zoomLabel = NSTextField(labelWithString: "100%")
-    private let sizeValue = NSTextField(labelWithString: "")
-    private let zoomValue = NSTextField(labelWithString: "100%")
     private var projectURL: URL?
 
     /// Style remembered per tool (a yellow highlighter stays yellow).
@@ -187,7 +185,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     @discardableResult
     private func iconButton(_ button: NSButton, symbol: String, tooltip: String, action: Selector) -> NSButton {
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: .regular))
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .medium))
         button.contentTintColor = .labelColor
         button.bezelStyle = .texturedRounded
         button.isBordered = false
@@ -195,8 +193,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         button.target = self
         button.action = action
         button.imagePosition = .imageOnly
-        button.widthAnchor.constraint(equalToConstant: 32).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        button.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 24).isActive = true
         return button
     }
 
@@ -250,19 +248,19 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     private static func symbol(_ name: String, _ weight: NSFont.Weight = .semibold) -> NSImage {
         let img = NSImage(systemSymbolName: name, accessibilityDescription: nil) ?? NSImage()
-        return img.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 15, weight: weight)) ?? img
+        return img.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: weight)) ?? img
     }
 
     private func configure(_ seg: NSSegmentedControl, images: [NSImage], tips: [String]) {
         seg.segmentCount = images.count
         seg.trackingMode = .selectOne
-        seg.controlSize = .large
+        seg.controlSize = .small
         seg.selectedSegmentBezelColor = Brand.accent
         seg.target = self
         seg.action = #selector(styleChanged)
         for (i, img) in images.enumerated() {
             seg.setImage(img, forSegment: i)
-            seg.setWidth(40, forSegment: i)
+            seg.setWidth(30, forSegment: i)
             seg.setToolTip(tips[i], forSegment: i)
         }
         seg.selectedSegment = 0
@@ -289,8 +287,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         static let history = NSToolbarItem.Identifier("snapper.history")
         static let copy = NSToolbarItem.Identifier("snapper.copy")
         static let save = NSToolbarItem.Identifier("snapper.save")
-        static let size = NSToolbarItem.Identifier("snapper.size")
-        static let zoom = NSToolbarItem.Identifier("snapper.zoom")
         static func tools(_ i: Int) -> NSToolbarItem.Identifier { NSToolbarItem.Identifier("snapper.tools.\(i)") }
     }
 
@@ -303,9 +299,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
-        window.toolbarStyle = .unified
 
-        let styleBar = StyleCard(content: buildStyleBar())
+        let styleBar = Glass.autoLayoutSurface(buildStyleBar(), cornerRadius: 17)
         let bottomBar = Glass.autoLayoutSurface(buildBottomBar(), cornerRadius: 19)
 
         let root = NSView()
@@ -321,11 +316,11 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             canvas.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor),
             canvas.bottomAnchor.constraint(equalTo: root.bottomAnchor),
 
-            // The tool's options sit in a card in the top-right corner, out of the picture's way.
             styleBar.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor, constant: 10),
-            styleBar.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -12),
+            centered(styleBar, in: root),
             styleBar.leadingAnchor.constraint(greaterThanOrEqualTo: root.leadingAnchor, constant: 12),
-            styleBar.heightAnchor.constraint(equalToConstant: 52),
+            styleBar.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -12),
+            styleBar.heightAnchor.constraint(equalToConstant: 36),
 
             bottomBar.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -12),
             centered(bottomBar, in: root),
@@ -369,7 +364,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         savePopup.removeAllItems()
         savePopup.addItem(withTitle: "")                        // title item of a pull-down: just the icon
         savePopup.item(at: 0)?.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: "Save")?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 16, weight: .regular))
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .medium))
         savePopup.addItem(withTitle: "Save Image…  ⌘S")
         savePopup.lastItem?.target = self
         savePopup.lastItem?.action = #selector(saveImageAction)
@@ -384,39 +379,21 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         savePopup.isBordered = false
         savePopup.toolTip = "Save"
         (savePopup.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
-        savePopup.widthAnchor.constraint(equalToConstant: 34).isActive = true
+        savePopup.widthAnchor.constraint(equalToConstant: 30).isActive = true
 
         backgroundButton.title = ""
         backgroundButton.imagePosition = .imageOnly
         backgroundButton.isBordered = false
-        backgroundButton.widthAnchor.constraint(equalToConstant: 34).isActive = true
-
-        for f in [sizeValue, zoomValue] {
-            f.font = .monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
-            f.textColor = .labelColor
-        }
+        backgroundButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
     }
 
-    /// A value over a small caption, like "1230×832 / Image size".
-    private func readout(_ value: NSTextField, caption: String) -> NSView {
-        let c = NSTextField(labelWithString: caption)
-        c.font = .systemFont(ofSize: 11)
-        c.textColor = .secondaryLabelColor
-        let v = NSStackView(views: [value, c])
-        v.orientation = .vertical
-        v.alignment = .leading
-        v.spacing = 0
-        v.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 4)
-        return v
-    }
 
     // MARK: NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        // File actions on the left, tools in the middle, live readouts on the right.
-        var ids: [NSToolbarItem.Identifier] = [ToolbarID.copy, ToolbarID.save, ToolbarID.background, .space, .flexibleSpace]
+        var ids: [NSToolbarItem.Identifier] = [ToolbarID.history]
         for i in 0..<Self.toolLayout.count { ids.append(ToolbarID.tools(i)) }
-        ids += [.flexibleSpace, ToolbarID.size, ToolbarID.zoom]
+        ids += [.flexibleSpace, ToolbarID.background, ToolbarID.copy, ToolbarID.save]
         return ids
     }
 
@@ -437,16 +414,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         case ToolbarID.copy:
             item.view = iconButton(symbol: "doc.on.doc", tooltip: "Copy image (⌘C)", action: #selector(copyAction))
             item.label = "Copy"
-        case ToolbarID.size:
-            item.view = readout(sizeValue, caption: "Image size")
-            item.label = "Image size"
-        case ToolbarID.zoom:
-            let v = readout(zoomValue, caption: "Zoom")
-            let click = NSClickGestureRecognizer(target: self, action: #selector(fitAction))
-            v.addGestureRecognizer(click)
-            v.toolTip = "Click to fit. Pinch or \u{2318}-scroll to zoom"
-            item.view = v
-            item.label = "Zoom"
         case ToolbarID.save:
             item.view = savePopup
             item.label = "Save"
@@ -465,8 +432,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         colorWell.target = self
         colorWell.action = #selector(styleChanged)
         colorWell.toolTip = "Color"
-        colorWell.widthAnchor.constraint(equalToConstant: 34).isActive = true
-        colorWell.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        colorWell.widthAnchor.constraint(equalToConstant: 36).isActive = true
+        colorWell.heightAnchor.constraint(equalToConstant: 20).isActive = true
         let picker = iconButton(symbol: "eyedropper", tooltip: "Pick a color from the screen", action: #selector(pickColorAction))
         paletteStack.orientation = .horizontal
         paletteStack.spacing = 4
@@ -474,7 +441,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
         for slider in [widthSlider, sizeSlider, angleSlider] {
             slider.target = self
-            slider.widthAnchor.constraint(equalToConstant: 150).isActive = true
+            slider.controlSize = .small
+            slider.widthAnchor.constraint(equalToConstant: 96).isActive = true
         }
         // Stroke and text size use a wedge track: thin on the left, thick on the right.
         for slider in [widthSlider, sizeSlider] {
@@ -553,8 +521,8 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         let ordered: [StyleControl] = [.crop, .color, .stroke, .shapeKind, .arrow, .smart, .zoom, .bubble, .text, .size, .blur, .spotlight]
         var views: [NSView] = ordered.compactMap { styleGroups[$0] }
         views += [hintLabel, removeCropButton]
-        let bar = row(views, spacing: 18)
-        bar.edgeInsets = NSEdgeInsets(top: 0, left: 18, bottom: 0, right: 18)
+        let bar = row(views, spacing: 14)
+        bar.edgeInsets = NSEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
         return bar
     }
 
@@ -586,7 +554,7 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         zoomLabel.toolTip = "Pinch or ⌘-scroll to zoom, scroll to pan"
         zoomLabel.widthAnchor.constraint(equalToConstant: 44).isActive = true
 
-        let bar = row([historyView, divider(), deleteButton, divider(),
+        let bar = row([deleteButton, divider(),
                        rotateLeft, rotateRight, flipH, flipV, resize, divider(), addImage, canvasPopup, divider(),
                        zoomOut, zoomLabel, zoomIn, fit], spacing: 4)
         bar.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
@@ -716,7 +684,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
     }
 
     private func canvasChanged() {
-        updateZoomLabel()
         // Swap per-tool styles when the tool changes (from the toolbar or a key).
         if canvas.tool != lastTool {
             if lastTool != .select && lastTool != .crop { toolStyles[lastTool] = canvas.style }
@@ -777,9 +744,6 @@ final class AnnotateWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
 
     private func updateZoomLabel() {
         zoomLabel.stringValue = "\(canvas.zoomPercent)%"
-        zoomValue.stringValue = "\(canvas.zoomPercent)%"
-        let size = canvas.imageSize
-        sizeValue.stringValue = "\(Int(size.width))\u{00D7}\(Int(size.height))"
     }
 
     private func updateBackgroundButton() {
@@ -1148,8 +1112,8 @@ final class ToolGroup: NSStackView {
         didSet {
             for (i, b) in buttons.enumerated() {
                 let on = i == selectedSegment
-                b.layer?.backgroundColor = on ? NSColor.labelColor.withAlphaComponent(0.1).cgColor : NSColor.clear.cgColor
-                b.contentTintColor = .labelColor
+                b.layer?.backgroundColor = on ? Brand.accent.withAlphaComponent(0.16).cgColor : NSColor.clear.cgColor
+                b.contentTintColor = on ? Brand.accent : .labelColor
             }
         }
     }
@@ -1157,11 +1121,11 @@ final class ToolGroup: NSStackView {
     init(images: [NSImage], tips: [String]) {
         super.init(frame: .zero)
         orientation = .horizontal
-        spacing = 4
+        spacing = 2
         edgeInsets = NSEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)
         for (i, image) in images.enumerated() {
             let b = NSButton()
-            b.image = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)) ?? image
+            b.image = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)) ?? image
             b.contentTintColor = .labelColor
             b.isBordered = false
             b.imagePosition = .imageOnly
@@ -1170,11 +1134,11 @@ final class ToolGroup: NSStackView {
             b.target = self
             b.action = #selector(tapped(_:))
             b.wantsLayer = true
-            b.layer?.cornerRadius = 9
+            b.layer?.cornerRadius = 7
             b.layer?.cornerCurve = .continuous
             b.translatesAutoresizingMaskIntoConstraints = false
-            b.widthAnchor.constraint(equalToConstant: 40).isActive = true
-            b.heightAnchor.constraint(equalToConstant: 34).isActive = true
+            b.widthAnchor.constraint(equalToConstant: 30).isActive = true
+            b.heightAnchor.constraint(equalToConstant: 26).isActive = true
             buttons.append(b)
             addArrangedSubview(b)
         }
@@ -1186,47 +1150,14 @@ final class ToolGroup: NSStackView {
 }
 
 
-// MARK: - Style card and wedge slider
-
-/// The tool options card: a solid rounded panel with a hairline border and a soft shadow.
-final class StyleCard: NSView {
-    init(content: NSView) {
-        super.init(frame: .zero)
-        translatesAutoresizingMaskIntoConstraints = false
-        wantsLayer = true
-        layer?.cornerRadius = 14
-        layer?.cornerCurve = .continuous
-        layer?.borderWidth = 0.5
-        layer?.shadowOpacity = 0.12
-        layer?.shadowRadius = 12
-        layer?.shadowOffset = CGSize(width: 0, height: -3)
-        content.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(content)
-        NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: trailingAnchor),
-            content.topAnchor.constraint(equalTo: topAnchor),
-            content.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func updateLayer() {
-        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.cgColor
-        layer?.shadowColor = NSColor.black.cgColor
-    }
-
-    override var wantsUpdateLayer: Bool { true }
-}
+// MARK: - Wedge slider
 
 /// Slider track drawn as a wedge, so the control itself shows that the value is a thickness.
 final class WedgeSliderCell: NSSliderCell {
     override func drawBar(inside rect: NSRect, flipped: Bool) {
         let r = rect.insetBy(dx: 2, dy: 0)
         let midY = r.midY
-        let thin: CGFloat = 1.5, thick: CGFloat = 9
+        let thin: CGFloat = 1.2, thick: CGFloat = 6
         func wedge(to x: CGFloat) -> NSBezierPath {
             let k = (x - r.minX) / max(r.width, 1)
             let h = thin + (thick - thin) * k
