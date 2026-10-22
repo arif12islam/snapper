@@ -78,6 +78,10 @@ enum AppPresence {
     /// Shows an app-style window as a normal window of a normal app. Snapper is a menu bar app, and macOS lets a
     /// menu bar app's windows float into another app's full-screen Space; switching to a regular app first (and
     /// giving the switch a moment) makes the window open on the desktop like any other app's window.
+    ///
+    /// From a full-screen Space, activating Snapper slides over to the desktop, but that switch is animated: a
+    /// window ordered in before it finishes still lands in the full-screen Space. So when a full-screen window is
+    /// on screen, the window waits for the Space change (or a timeout, if macOS stays put) before it is shown.
     static func present(_ window: NSWindow, focus: NSResponder? = nil) {
         var behavior = window.collectionBehavior
         behavior.remove([.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace, .transient, .stationary])
@@ -85,17 +89,64 @@ enum AppPresence {
         window.collectionBehavior = behavior
 
         let wasMenuBarOnly = NSApp.activationPolicy() != .regular
+        let leavingFullScreen = !window.isVisible && fullScreenWindowOnScreen()
         track(window)
         let show = {
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             if let focus { window.makeFirstResponder(focus) }
         }
-        if wasMenuBarOnly {
+        if leavingFullScreen {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (wasMenuBarOnly ? 0.08 : 0)) {
+                NSApp.activate(ignoringOtherApps: true)
+                afterSpaceChange(timeout: 1.0) { show() }
+            }
+        } else if wasMenuBarOnly {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { show() }
         } else {
             show()
         }
+    }
+
+    /// Runs `action` once the active Space has changed (plus a beat for the slide to settle), or after `timeout`.
+    private static func afterSpaceChange(timeout: TimeInterval, _ action: @escaping @MainActor () -> Void) {
+        var observer: NSObjectProtocol?
+        var done = false
+        let finish = {
+            guard !done else { return }
+            done = true
+            if let observer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+            action()
+        }
+        observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                finish()
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { finish() }
+    }
+
+    /// True when another app's window fills a whole display, which is what a full-screen Space looks like
+    /// (a zoomed window still leaves the menu bar uncovered).
+    private static func fullScreenWindowOnScreen() -> Bool {
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return false }
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(0, nil, &count)
+        var displays = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        CGGetActiveDisplayList(count, &displays, &count)
+        let displayBounds = displays.prefix(Int(count)).map { CGDisplayBounds($0) }
+        let me = ProcessInfo.processInfo.processIdentifier
+        for info in list {
+            guard (info[kCGWindowLayer as String] as? Int) == 0,
+                  (info[kCGWindowOwnerPID as String] as? pid_t) != me,
+                  let dict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: dict) else { continue }
+            if displayBounds.contains(where: { $0.integral == bounds.integral }) { return true }
+        }
+        return false
     }
 
     private static func update(activate: Bool) {
