@@ -79,8 +79,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Snapper</string>
   <key>CFBundleIdentifier</key><string>com.example.snapper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.40</string>
-  <key>CFBundleVersion</key><string>41</string>
+  <key>CFBundleShortVersionString</key><string>1.41</string>
+  <key>CFBundleVersion</key><string>42</string>
   <key>NSHumanReadableCopyright</key><string>Snapper. Built by Bykorp.</string>
 ${ICON_KEY}
   <key>LSMinimumSystemVersion</key><string>14.0</string>

@@ -220,7 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         LaunchAtLogin.syncPreference()
 
         RecordingSession.offerRecovery()
-        Updater.checkInBackground()
+        Updater.startAutomaticChecks()
         WelcomePanel.showIfNeeded()
     }
 
@@ -475,6 +475,21 @@ enum MenuFactory {
         return item
     }
 
+    // MARK: Updates
+
+    /// The Snapper menu's update item, retitled when a newer release is found ("Update to Snapper …").
+    private static weak var mainUpdateItem: NSMenuItem?
+
+    private static func updateItem() -> NSMenuItem {
+        let item = action(Updater.menuTitle) { Updater.menuAction() }
+        mainUpdateItem = item
+        return item
+    }
+
+    static func refreshUpdateItem() {
+        mainUpdateItem?.title = Updater.menuTitle
+    }
+
     // MARK: Menu bar item
 
     static func fillStatusMenu(_ menu: NSMenu, delegate: NSMenuDelegate) {
@@ -543,7 +558,7 @@ enum MenuFactory {
             action("About Snapper") { AboutWindow.show() },
             .separator(),
             action("Settings…", key: ",") { SettingsWindowController.show() },
-            action("Check for Updates…") { Updater.menuAction() },
+            updateItem(),
             .separator(),
             standard("Hide Snapper", #selector(NSApplication.hide(_:)), key: "h"),
             standard("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), key: "h", mods: [.command, .option]),
