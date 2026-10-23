@@ -195,6 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        CrashReporter.start()
         NSApp.setActivationPolicy(.accessory)
         NSApp.applicationIconImage = Brand.appIcon
 

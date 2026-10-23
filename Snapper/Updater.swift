@@ -293,6 +293,7 @@ enum Updater {
             NSApp.terminate(nil)
         } catch {
             Toast.show("Update failed: \(error.localizedDescription)", seconds: 5)
+            CrashReporter.record("Update install", error: error)
         }
     }
 }

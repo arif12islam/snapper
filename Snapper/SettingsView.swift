@@ -61,6 +61,29 @@ struct SettingsView: View {
     }
 }
 
+/// Settings > General > Privacy: the opt-in for anonymous crash and error reports.
+private struct PrivacySection: View {
+    @AppStorage("sendCrashReports") var sendCrashReports = false
+    @State private var showReports = false
+
+    var body: some View {
+        Section {
+            Toggle("Send anonymous crash and error reports", isOn: $sendCrashReports)
+                .onChange(of: sendCrashReports) { _, on in if on { CrashReporter.sendPending() } }
+            HStack {
+                Text("Versions, Mac model and what went wrong. Never your captures, file names or anything you type.")
+                    .font(.caption).foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button("View What’s Sent…") { showReports = true }
+            }
+        } header: {
+            Text("Privacy")
+        }
+        .sheet(isPresented: $showReports) { ReportsView() }
+    }
+}
+
 /// Settings > General > Updates: shows a found update with its Update button, or the result of the last check.
 private struct UpdatesSection: View {
     @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
@@ -128,6 +151,7 @@ private struct GeneralSettings: View {
                 Toggle("Play a sound when capturing", isOn: $playSound)
             }
             UpdatesSection()
+            PrivacySection()
             Section("After capture") {
                 Toggle("Show Quick Access overlay", isOn: $showQuickAccess)
                 Toggle("Copy to clipboard", isOn: $copyAfterCapture)
