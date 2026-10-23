@@ -61,6 +61,42 @@ struct SettingsView: View {
     }
 }
 
+/// Settings > General > Updates: shows a found update with its Update button, or the result of the last check.
+private struct UpdatesSection: View {
+    @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
+    @ObservedObject private var status = UpdateStatus.shared
+
+    var body: some View {
+        Section("Updates") {
+            Toggle("Check for updates automatically", isOn: $autoUpdateCheck)
+            if let release = status.available {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("New update available").font(.headline)
+                        Text("Snapper \(release.version) is ready. You have \(Updater.currentVersion).")
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    if status.busy { ProgressView().controlSize(.small) }
+                    Button(status.busy ? "Updating…" : "Update to \(release.version)") { Updater.menuAction() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(status.busy)
+                }
+            } else {
+                HStack {
+                    Text(status.checking ? "Checking for updates…" : status.note ?? "Version \(Updater.currentVersion)")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    if status.checking { ProgressView().controlSize(.small) }
+                    Button("Check Now") { Task { await Updater.check(userInitiated: true, fromSettings: true) } }
+                        .disabled(status.checking)
+                }
+            }
+        }
+        .onAppear { Updater.checkInBackground(olderThan: 3600) }
+    }
+}
+
 private struct GeneralSettings: View {
     @AppStorage("launchAtLogin") var launchAtLogin = false
     @AppStorage("playSound") var playSound = true
@@ -70,7 +106,6 @@ private struct GeneralSettings: View {
     @AppStorage("saveFolderPath") var saveFolderPath = ""
     @AppStorage("fileNameTemplate") var fileNameTemplate = "Snapper {date} at {time}"
     @AppStorage("retentionDays") var retentionDays = 7.0
-    @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
 
     var body: some View {
         Form {
@@ -92,14 +127,7 @@ private struct GeneralSettings: View {
                     .onChange(of: launchAtLogin) { _, newValue in LaunchAtLogin.apply(newValue) }
                 Toggle("Play a sound when capturing", isOn: $playSound)
             }
-            Section("Updates") {
-                Toggle("Check for updates automatically", isOn: $autoUpdateCheck)
-                HStack {
-                    Text("Version \(Updater.currentVersion)").foregroundColor(.secondary)
-                    Spacer()
-                    Button("Check Now") { Updater.menuAction() }
-                }
-            }
+            UpdatesSection()
             Section("After capture") {
                 Toggle("Show Quick Access overlay", isOn: $showQuickAccess)
                 Toggle("Copy to clipboard", isOn: $copyAfterCapture)

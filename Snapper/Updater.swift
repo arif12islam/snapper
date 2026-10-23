@@ -1,5 +1,18 @@
 import AppKit
+import Combine
 import Security
+
+/// What the updater knows right now, published so Settings and the menus can show it as it changes.
+@MainActor
+final class UpdateStatus: ObservableObject {
+    static let shared = UpdateStatus()
+    /// A newer release, once a check has found one.
+    @Published fileprivate(set) var available: Updater.Release? { didSet { MenuFactory.refreshUpdateItem() } }
+    @Published fileprivate(set) var busy = false { didSet { MenuFactory.refreshUpdateItem() } }
+    @Published fileprivate(set) var checking = false
+    /// The outcome of the last check the person ran, e.g. "Snapper is up to date (1.40)".
+    @Published fileprivate(set) var note: String?
+}
 
 /// In-app updates. Snapper looks at a release feed, downloads the newer build, swaps itself in place and relaunches.
 ///
@@ -13,9 +26,10 @@ enum Updater {
         let url: URL
     }
 
-    private(set) static var available: Release?
-    private static var busy = false
+    static var available: Release? { UpdateStatus.shared.available }
+    private static var busy: Bool { UpdateStatus.shared.busy }
     private static let lastCheckKey = "updateLastCheck"
+    private static var timer: Timer?
 
     static let repository = "arif12islam/snapper"
 
@@ -45,11 +59,20 @@ enum Updater {
         }
     }
 
-    /// Quiet check at launch, at most twice a day.
-    static func checkInBackground() {
-        guard automatic else { return }
+    /// Quiet check at launch, then every few hours while Snapper runs, so a new release shows up on its own.
+    static func startAutomaticChecks() {
+        checkInBackground(olderThan: 0)
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
+            Task { @MainActor in checkInBackground(olderThan: 6 * 3600) }
+        }
+    }
+
+    /// Quiet check when automatic checks are on and the last one is older than `age` seconds.
+    static func checkInBackground(olderThan age: TimeInterval) {
+        guard automatic, !busy, !UpdateStatus.shared.checking else { return }
         let last = UserDefaults.standard.double(forKey: lastCheckKey)
-        guard Date().timeIntervalSince1970 - last > 12 * 3600 else { return }
+        guard Date().timeIntervalSince1970 - last >= age else { return }
         Task { await check(userInitiated: false) }
     }
 
@@ -59,10 +82,16 @@ enum Updater {
         URL(string: "https://api.github.com/repos/\(repository)/releases/latest")
     }
 
-    static func check(userInitiated: Bool) async {
+    /// `fromSettings`: the person pressed Check Now in Settings, which shows the result and the Update button itself.
+    static func check(userInitiated: Bool, fromSettings: Bool = false) async {
         guard let url = feedURL() else { return }
+        let status = UpdateStatus.shared
+        guard !status.checking else { return }
+        status.checking = true
+        defer { status.checking = false }
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastCheckKey)
-        if userInitiated { Toast.show("Checking for updates…") }
+        if userInitiated { status.note = nil }
+        if userInitiated && !fromSettings { Toast.show("Checking for updates…") }
         do {
             var request = URLRequest(url: url)
             request.setValue("Snapper/\(currentVersion)", forHTTPHeaderField: "User-Agent")
@@ -78,18 +107,27 @@ enum Updater {
                               userInfo: [NSLocalizedDescriptionKey: "No release with a download was found yet."])
             }
             if isNewer(release.version, than: currentVersion) {
-                available = release
-                if userInitiated {
-                    Toast.show("Version \(release.version) is available. Choose Update from the menu.", seconds: 3.5)
-                } else {
-                    Toast.show("Snapper \(release.version) is available. Update from the menu bar.", seconds: 3.5)
+                let isNew = status.available?.version != release.version
+                status.available = release
+                if fromSettings {
+                    // Settings now shows "Update to …" right where the person is.
+                } else if userInitiated {
+                    Toast.show("Snapper \(release.version) is available. Choose Update in the menu or in Settings.", seconds: 3.5)
+                } else if isNew {
+                    Toast.show("Snapper \(release.version) is available. Update from the menu bar or Settings.", seconds: 3.5)
                 }
             } else {
-                available = nil
-                if userInitiated { Toast.show("Snapper is up to date (\(currentVersion))") }
+                status.available = nil
+                if userInitiated {
+                    status.note = "Snapper is up to date (\(currentVersion))"
+                    if !fromSettings { Toast.show("Snapper is up to date (\(currentVersion))") }
+                }
             }
         } catch {
-            if userInitiated { Toast.show("Update check failed: \(error.localizedDescription)", seconds: 4) }
+            if userInitiated {
+                status.note = "Update check failed: \(error.localizedDescription)"
+                if !fromSettings { Toast.show("Update check failed: \(error.localizedDescription)", seconds: 4) }
+            }
         }
     }
 
@@ -202,8 +240,8 @@ enum Updater {
 
     static func install(_ release: Release) async {
         guard !busy else { return }
-        busy = true
-        defer { busy = false }
+        UpdateStatus.shared.busy = true
+        defer { UpdateStatus.shared.busy = false }
         Toast.show("Downloading Snapper \(release.version)…", seconds: 60)
         do {
             var request = URLRequest(url: release.url)
