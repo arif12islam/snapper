@@ -22,6 +22,7 @@ you get an email so you can invite them.
 | `SITE_URL` | Public URL of this site, e.g. `https://snapper.yourdomain.com`. Optional. |
 | `GITHUB_TOKEN` | Optional. Raises the GitHub API rate limit. A token with no scopes is enough. |
 | `SNAPPER_REPO` | Optional. Defaults to `arif12islam/snapper`. |
+| `REPORTS_EMAIL` | Optional. Where crash and error reports from the app are emailed. Defaults to `OWNER_EMAIL`. |
 
 Generate a secret with `openssl rand -base64 32`.
 
@@ -36,3 +37,10 @@ The links in the emails expire after 7 days and cannot be forged, but the `.dmg`
 release, so anyone who finds that URL can download it. This keeps casual visitors out and tells you who asked.
 For a hard gate the repository and its releases would have to be private, and the in-app updater, which reads the
 public release feed, would stop working.
+
+## Crash and error reports
+
+`/api/report` receives the anonymous reports people opt into in Snapper (Settings, General, Privacy). Every report
+is written to the function log (Vercel, the project, Logs, search `snapper-report`) and emailed to `REPORTS_EMAIL`
+(or `OWNER_EMAIL`) when one is set. The app sends to `https://snapper-arif12islams-projects.vercel.app/api/report`
+by default; build with `SNAPPER_REPORT_URL=https://… ./build.sh` to point it elsewhere.

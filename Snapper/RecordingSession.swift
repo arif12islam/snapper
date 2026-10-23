@@ -117,6 +117,7 @@ final class RecordingSession {
     }
 
     private static func logFailure(_ error: Error) {
+        CrashReporter.record("Recording", error: error)
         let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Snapper", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let log = dir.appendingPathComponent("recording.log")
@@ -349,6 +350,7 @@ final class RecordingSession {
             let error = await GIFExporter.export(video: url, to: gifURL, progress: { _ in })
             if let error {
                 Toast.show("GIF failed: \(error.localizedDescription)", on: screen, seconds: 5)
+                CrashReporter.record("GIF export", error: error)
                 await present(url, kind: "recording", screen: screen)
                 return
             }

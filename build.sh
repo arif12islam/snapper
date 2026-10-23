@@ -79,8 +79,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>Snapper</string>
   <key>CFBundleIdentifier</key><string>com.example.snapper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.41</string>
-  <key>CFBundleVersion</key><string>42</string>
+  <key>CFBundleShortVersionString</key><string>1.42</string>
+  <key>CFBundleVersion</key><string>43</string>
+  <key>SnapperReportURL</key><string>${SNAPPER_REPORT_URL:-https://snapper-arif12islams-projects.vercel.app/api/report}</string>
   <key>NSHumanReadableCopyright</key><string>Snapper. Built by Bykorp.</string>
 ${ICON_KEY}
   <key>LSMinimumSystemVersion</key><string>14.0</string>
